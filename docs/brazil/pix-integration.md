@@ -32,6 +32,10 @@ Unlike a card authorization, Pix is asynchronous:
   `requires_action?` deliberately still means "needs SCA via stripe.js", so existing card
   SCA handling is unchanged.
 - Specs in `spec/business/payments/charging/implementations/stripe/stripe_charge_intent_spec.rb`.
+- Buyer-facing `PixPayment` component (`app/javascript/components/Checkout/PixPayment.tsx`): renders
+  the QR image, the copy-and-paste code, a live countdown to expiry, and awaiting/confirmed/expired
+  states using the `checkout.pix*` i18n keys. It is presentational and does not yet receive live data
+  or drive confirmation polling (see remaining items 1, 4, 5).
 
 ## Remaining work
 
@@ -64,11 +68,10 @@ Pix produces a `TYPE_CHARGE_SUCCEEDED` event and marks the purchase paid. Add ha
 expiry/cancellation case.
 
 ### 5. Frontend (checkout)
-`app/javascript/components/Checkout/` needs a Pix option that, after intent creation, renders the
-QR image + copy-and-paste code (from `pix_qr_code`/`pix_qr_code_image_url`) and polls or
-subscribes until the purchase is confirmed, with a countdown to `pix_expires_at`. Use the
-`checkout.payWithPix` / `checkout.awaitingPayment` / `checkout.paymentConfirmed` i18n keys added
-in the localization phase.
+The presentational `PixPayment` component exists. What remains is integration: add a Pix option to
+the payment selector in `PaymentForm.tsx`, pass the intent's `pix_qr_code` / `pix_qr_code_image_url` /
+`pix_expires_at` from the backend (these must be serialized into the order/charge response), and poll
+or subscribe until the purchase is confirmed so `status` flips from `awaiting` to `confirmed`.
 
 ### 6. Tests
 Add VCR-backed specs (scoped per file) for chargeable creation and the processing -> succeeded

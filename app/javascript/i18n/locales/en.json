@@ -9,7 +9,12 @@
     "name": "Name",
     "taxId": "Tax ID",
     "awaitingPayment": "Waiting for payment",
-    "paymentConfirmed": "Payment confirmed"
+    "paymentConfirmed": "Payment confirmed",
+    "pixInstructions": "Scan the QR code with your bank app, or copy the code below to pay.",
+    "pixCopyCode": "Copy Pix code",
+    "pixCodeCopied": "Copied!",
+    "pixExpiresIn": "Expires in {{time}}",
+    "pixExpired": "This Pix code has expired. Please start a new payment."
   },
   "common": {
     "loading": "Loading…",

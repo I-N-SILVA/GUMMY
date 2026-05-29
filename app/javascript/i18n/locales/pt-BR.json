@@ -9,7 +9,12 @@
     "name": "Nome",
     "taxId": "CPF/CNPJ",
     "awaitingPayment": "Aguardando pagamento",
-    "paymentConfirmed": "Pagamento confirmado"
+    "paymentConfirmed": "Pagamento confirmado",
+    "pixInstructions": "Escaneie o QR code com o app do seu banco ou copie o código abaixo para pagar.",
+    "pixCopyCode": "Copiar código Pix",
+    "pixCodeCopied": "Copiado!",
+    "pixExpiresIn": "Expira em {{time}}",
+    "pixExpired": "Este código Pix expirou. Inicie um novo pagamento."
   },
   "common": {
     "loading": "Carregando…",
