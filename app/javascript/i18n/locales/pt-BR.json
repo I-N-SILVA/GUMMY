@@ -1,0 +1,21 @@
+{
+  "checkout": {
+    "title": "Finalizar compra",
+    "pay": "Pagar",
+    "payWithPix": "Pagar com Pix",
+    "payWithCard": "Pagar com cartão",
+    "total": "Total",
+    "email": "E-mail",
+    "name": "Nome",
+    "taxId": "CPF/CNPJ",
+    "awaitingPayment": "Aguardando pagamento",
+    "paymentConfirmed": "Pagamento confirmado"
+  },
+  "common": {
+    "loading": "Carregando…",
+    "somethingWentWrong": "Desculpe, algo deu errado.",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "continue": "Continuar"
+  }
+}

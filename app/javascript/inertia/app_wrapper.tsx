@@ -1,10 +1,12 @@
 import React from "react";
+import { I18nextProvider } from "react-i18next";
 
 import { DesignContextProvider, DesignSettings } from "$app/components/DesignSettings";
 import { DomainSettingsProvider } from "$app/components/DomainSettings";
 import { FeatureFlags, FeatureFlagsProvider } from "$app/components/FeatureFlags";
 import { SSRLocationProvider } from "$app/components/useOriginalLocation";
 import { UserAgentProvider } from "$app/components/UserAgent";
+import { initI18n } from "$app/i18n";
 
 type GlobalProps = {
   design_settings: DesignSettings;
@@ -26,30 +28,34 @@ type GlobalProps = {
 };
 
 export default function AppWrapper({ children, global }: { children: React.ReactNode; global: GlobalProps }) {
+  const i18n = initI18n(global.locale);
+
   return (
-    <DesignContextProvider value={global.design_settings}>
-      <DomainSettingsProvider
-        value={{
-          scheme: global.domain_settings.scheme,
-          appDomain: global.domain_settings.app_domain,
-          rootDomain: global.domain_settings.root_domain,
-          shortDomain: global.domain_settings.short_domain,
-          discoverDomain: global.domain_settings.discover_domain,
-          thirdPartyAnalyticsDomain: global.domain_settings.third_party_analytics_domain,
-          apiDomain: global.domain_settings.api_domain,
-        }}
-      >
-        <UserAgentProvider
+    <I18nextProvider i18n={i18n}>
+      <DesignContextProvider value={global.design_settings}>
+        <DomainSettingsProvider
           value={{
-            isMobile: global.user_agent_info.is_mobile,
-            locale: global.locale,
+            scheme: global.domain_settings.scheme,
+            appDomain: global.domain_settings.app_domain,
+            rootDomain: global.domain_settings.root_domain,
+            shortDomain: global.domain_settings.short_domain,
+            discoverDomain: global.domain_settings.discover_domain,
+            thirdPartyAnalyticsDomain: global.domain_settings.third_party_analytics_domain,
+            apiDomain: global.domain_settings.api_domain,
           }}
         >
-          <FeatureFlagsProvider value={global.feature_flags}>
-            <SSRLocationProvider value={global.href}>{children}</SSRLocationProvider>
-          </FeatureFlagsProvider>
-        </UserAgentProvider>
-      </DomainSettingsProvider>
-    </DesignContextProvider>
+          <UserAgentProvider
+            value={{
+              isMobile: global.user_agent_info.is_mobile,
+              locale: global.locale,
+            }}
+          >
+            <FeatureFlagsProvider value={global.feature_flags}>
+              <SSRLocationProvider value={global.href}>{children}</SSRLocationProvider>
+            </FeatureFlagsProvider>
+          </UserAgentProvider>
+        </DomainSettingsProvider>
+      </DesignContextProvider>
+    </I18nextProvider>
   );
 }

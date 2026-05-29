@@ -1,0 +1,18 @@
+en:
+  checkout:
+    title: Checkout
+    pay: Pay
+    pay_with_pix: Pay with Pix
+    pay_with_card: Pay with card
+    total: Total
+    email: Email
+    name: Name
+    tax_id: Tax ID
+    awaiting_payment: Waiting for payment
+    payment_confirmed: Payment confirmed
+  common:
+    loading: Loading…
+    something_went_wrong: Sorry, something went wrong.
+    cancel: Cancel
+    save: Save
+    continue: Continue
