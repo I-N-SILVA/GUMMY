@@ -19,6 +19,29 @@ class StripeChargeIntent < ChargeIntent
     payment_intent.status == StripeIntentStatus::REQUIRES_ACTION && payment_intent.next_action.type == StripeIntentStatus::ACTION_TYPE_USE_SDK
   end
 
+  # Pix payments are asynchronous: Stripe returns a QR code that the buyer scans in their bank app,
+  # and the charge is confirmed later via webhook. The intent sits in `requires_action` with a
+  # `pix_display_qr_code` next action until the buyer pays or the code expires.
+  def displays_pix_qr_code?
+    payment_intent.status == StripeIntentStatus::REQUIRES_ACTION &&
+      payment_intent.next_action&.type == StripeIntentStatus::ACTION_TYPE_PIX_DISPLAY_QR_CODE
+  end
+
+  def pix_qr_code
+    payment_intent.next_action.pix_display_qr_code.data if displays_pix_qr_code?
+  end
+
+  def pix_qr_code_image_url
+    payment_intent.next_action.pix_display_qr_code.image_url_png if displays_pix_qr_code?
+  end
+
+  def pix_expires_at
+    return unless displays_pix_qr_code?
+
+    expires_at = payment_intent.next_action.pix_display_qr_code.expires_at
+    Time.zone.at(expires_at) if expires_at.present?
+  end
+
   def canceled?
     payment_intent.status == StripeIntentStatus::CANCELED
   end
@@ -42,8 +65,13 @@ class StripeChargeIntent < ChargeIntent
       self.charge = StripeChargeProcessor.new.get_charge(charge_id, merchant_account:)
     end
 
+    SUPPORTED_NEXT_ACTION_TYPES = [
+      StripeIntentStatus::ACTION_TYPE_USE_SDK,
+      StripeIntentStatus::ACTION_TYPE_PIX_DISPLAY_QR_CODE,
+    ].freeze
+
     def validate_next_action
-      if payment_intent.status == StripeIntentStatus::REQUIRES_ACTION && payment_intent.next_action.type != StripeIntentStatus::ACTION_TYPE_USE_SDK
+      if payment_intent.status == StripeIntentStatus::REQUIRES_ACTION && !SUPPORTED_NEXT_ACTION_TYPES.include?(payment_intent.next_action.type)
         ErrorNotifier.notify "Stripe charge intent #{id} requires an unsupported action: #{payment_intent.next_action.type}"
       end
     end
