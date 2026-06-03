@@ -30,6 +30,8 @@ class RegionalVatIdValidationService
       TraTinValidationService.new(vat_id).process
     elsif country_code == Compliance::Countries::OMN.alpha2
       OmanVatNumberValidationService.new(vat_id).process
+    elsif country_code == Compliance::Countries::BRA.alpha2
+      CpfCnpjValidationService.new(vat_id).process
     elsif Compliance::Countries::COUNTRIES_THAT_COLLECT_TAX_ON_ALL_PRODUCTS.include?(country_code) ||
           Compliance::Countries::COUNTRIES_THAT_COLLECT_TAX_ON_DIGITAL_PRODUCTS_WITH_TAX_ID_PRO_VALIDATION.include?(country_code)
       TaxIdValidationService.new(vat_id, country_code).process

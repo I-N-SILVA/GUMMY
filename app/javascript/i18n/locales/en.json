@@ -1,0 +1,26 @@
+{
+  "checkout": {
+    "title": "Checkout",
+    "pay": "Pay",
+    "payWithPix": "Pay with Pix",
+    "payWithCard": "Pay with card",
+    "total": "Total",
+    "email": "Email",
+    "name": "Name",
+    "taxId": "Tax ID",
+    "awaitingPayment": "Waiting for payment",
+    "paymentConfirmed": "Payment confirmed",
+    "pixInstructions": "Scan the QR code with your bank app, or copy the code below to pay.",
+    "pixCopyCode": "Copy Pix code",
+    "pixCodeCopied": "Copied!",
+    "pixExpiresIn": "Expires in {{time}}",
+    "pixExpired": "This Pix code has expired. Please start a new payment."
+  },
+  "common": {
+    "loading": "Loading…",
+    "somethingWentWrong": "Sorry, something went wrong.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "continue": "Continue"
+  }
+}
