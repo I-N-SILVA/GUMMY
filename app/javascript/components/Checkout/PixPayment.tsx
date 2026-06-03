@@ -57,9 +57,13 @@ export const PixPayment = ({ qrCode, qrCodeImageUrl, expiresAt, status }: PixPay
     );
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <p>{t("checkout.pixInstructions")}</p>
-      <img src={qrCodeImageUrl} alt={t("checkout.payWithPix")} className="size-48" />
+    <div className="bg-grain surface-glass shadow-premium flex flex-col items-center gap-4 rounded-2xl p-8 text-center">
+      <p className="text-fluid-lg font-medium">{t("checkout.pixInstructions")}</p>
+      <img
+        src={qrCodeImageUrl}
+        alt={t("checkout.payWithPix")}
+        className="size-48 rounded-2xl ring-1 ring-border transition-transform duration-500 ease-premium hover:scale-105"
+      />
       <CopyToClipboard text={qrCode} copyTooltip={t("checkout.pixCopyCode")} copiedTooltip={t("checkout.pixCodeCopied")}>
         <Button color="primary">{t("checkout.pixCopyCode")}</Button>
       </CopyToClipboard>
