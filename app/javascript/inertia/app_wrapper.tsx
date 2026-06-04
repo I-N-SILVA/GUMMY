@@ -1,12 +1,13 @@
 import React from "react";
 import { I18nextProvider } from "react-i18next";
 
+import { initI18n } from "$app/i18n";
+
 import { DesignContextProvider, DesignSettings } from "$app/components/DesignSettings";
 import { DomainSettingsProvider } from "$app/components/DomainSettings";
 import { FeatureFlags, FeatureFlagsProvider } from "$app/components/FeatureFlags";
 import { SSRLocationProvider } from "$app/components/useOriginalLocation";
 import { UserAgentProvider } from "$app/components/UserAgent";
-import { initI18n } from "$app/i18n";
 
 type GlobalProps = {
   design_settings: DesignSettings;

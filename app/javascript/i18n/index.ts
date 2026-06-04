@@ -11,7 +11,7 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 function normalizeLocale(locale: string | undefined): SupportedLocale {
   if (!locale) return DEFAULT_LOCALE;
   if (locale.toLowerCase().startsWith("pt")) return "pt-BR";
-  return (SUPPORTED_LOCALES as readonly string[]).includes(locale) ? (locale as SupportedLocale) : DEFAULT_LOCALE;
+  return SUPPORTED_LOCALES.find((supported) => supported === locale) ?? DEFAULT_LOCALE;
 }
 
 let initialized = false;

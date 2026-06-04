@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
-import { Input } from "$app/components/ui/Input";
 import { formatCpfCnpj, stripTaxIdFormatting } from "$app/utils/taxId";
+
+import { Input } from "$app/components/ui/Input";
 
 export type CpfCnpjInputProps = {
   value: string;

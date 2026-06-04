@@ -57,22 +57,28 @@ export const PixPayment = ({ qrCode, qrCodeImageUrl, expiresAt, status }: PixPay
     );
 
   return (
-    <div className="bg-grain surface-glass shadow-premium flex flex-col items-center gap-4 rounded-2xl p-8 text-center">
+    <div className="bg-grain flex flex-col items-center gap-4 rounded-2xl surface-glass p-8 text-center shadow-premium">
       <p className="text-fluid-lg font-medium">{t("checkout.pixInstructions")}</p>
       <img
         src={qrCodeImageUrl}
         alt={t("checkout.payWithPix")}
         className="size-48 rounded-2xl ring-1 ring-border transition-transform duration-500 ease-premium hover:scale-105"
       />
-      <CopyToClipboard text={qrCode} copyTooltip={t("checkout.pixCopyCode")} copiedTooltip={t("checkout.pixCodeCopied")}>
+      <CopyToClipboard
+        text={qrCode}
+        copyTooltip={t("checkout.pixCopyCode")}
+        copiedTooltip={t("checkout.pixCodeCopied")}
+      >
         <Button color="primary">{t("checkout.pixCopyCode")}</Button>
       </CopyToClipboard>
-      <code className="break-all text-xs">{qrCode}</code>
+      <code className="text-xs break-all">{qrCode}</code>
       <div aria-live="polite" className="flex items-center gap-2">
         <LoadingSpinner />
         <span>
           {t("checkout.awaitingPayment")}
-          {secondsRemaining != null ? ` · ${t("checkout.pixExpiresIn", { time: formatCountdown(secondsRemaining) })}` : null}
+          {secondsRemaining != null
+            ? ` · ${t("checkout.pixExpiresIn", { time: formatCountdown(secondsRemaining) })}`
+            : null}
         </span>
       </div>
     </div>
