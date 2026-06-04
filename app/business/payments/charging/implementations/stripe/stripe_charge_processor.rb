@@ -41,6 +41,8 @@ class StripeChargeProcessor
       StripeChargeablePaymentMethod.new(params[:stripe_payment_method_id], customer_id: params[:stripe_customer_id],
                                                                            stripe_setup_intent_id: params[:stripe_setup_intent_id],
                                                                            zip_code:, product_permalink:)
+    elsif params[:pix].present?
+      StripeChargeablePix.new(zip_code:)
     end
   end
 

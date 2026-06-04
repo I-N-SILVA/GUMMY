@@ -36,6 +36,13 @@ Unlike a card authorization, Pix is asynchronous:
   the QR image, the copy-and-paste code, a live countdown to expiry, and awaiting/confirmed/expired
   states using the `checkout.pix*` i18n keys. It is presentational and does not yet receive live data
   or drive confirmation polling (see remaining items 1, 4, 5).
+- `StripeChargeablePix` (`app/business/payments/charging/implementations/stripe/stripe_chargeable_pix.rb`):
+  the chargeable for a Pix intent. It supplies `stripe_charge_params` of
+  `{ payment_method_types: ["pix"] }`, returns `nil` from `reusable_token!` (Pix is single-use and
+  cannot be saved off-session), and exposes nil card fields like `PaypalChargeable`. Wired into
+  `StripeChargeProcessor#get_chargeable_for_params` behind a `params[:pix]` flag so a `pix` param
+  from checkout produces this chargeable. Unit specs in
+  `spec/business/payments/charging/implementations/stripe/stripe_chargeable_pix_spec.rb`.
 
 ## Remaining work
 
@@ -47,12 +54,12 @@ hardcodes `currency: "usd"`. Stripe Pix only settles in `brl`. The Pix path must
 surrounding purchase/charge pipeline assumes USD settlement — audit `Purchase` amount fields
 and `app/services/order/create_service.rb` for the conversion points before changing this.
 
-### 2. Pix chargeable
-Add `StripeChargeablePix` alongside `StripeChargeablePaymentMethod`. It supplies
-`stripe_charge_params` for a Pix intent (`payment_method_types: ["pix"]`, no saved customer,
-not reusable — Pix cannot be stored for off-session reuse, so `can_be_saved?` is false and
-`off_session` must be false). Wire it into `StripeChargeProcessor#get_chargeable_for_params`
-(line 34) so a `pix` param from checkout produces this chargeable.
+### 2. Pix chargeable — done
+See the "Done" section above. `StripeChargeablePix` exists and is wired into
+`StripeChargeProcessor#get_chargeable_for_params`. Still open from the original note:
+`off_session` must be forced to false for Pix and `can_be_saved?` should treat Pix as
+unsaveable — both belong with the purchase-state work in item 3, where the charge is actually
+created and confirmed.
 
 ### 3. Purchase "in progress / awaiting payment" state
 Because confirmation is async, the purchase must hold in a pending state after the intent is
