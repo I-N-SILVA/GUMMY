@@ -32,6 +32,7 @@ import { checkEmailForTypos as checkEmailForTyposUtil } from "$app/utils/email";
 import { asyncVoid } from "$app/utils/promise";
 
 import { Button } from "$app/components/Button";
+import { CpfCnpjInput } from "$app/components/Checkout/CpfCnpjInput";
 import { CreditCardInput, StripeElementsProvider } from "$app/components/Checkout/CreditCardInput";
 import { CustomFields } from "$app/components/Checkout/CustomFields";
 import {
@@ -234,6 +235,9 @@ const SharedInputs = ({ className }: { className?: string | undefined }) => {
     case "BH":
       vatLabel = "Business TRN ID (optional)";
       break;
+    case "BR":
+      vatLabel = "CPF / CNPJ (optional)";
+      break;
     case "AU":
       vatLabel = "Business ABN ID (optional)";
       break;
@@ -389,13 +393,22 @@ const SharedInputs = ({ className }: { className?: string | undefined }) => {
               <FieldsetTitle>
                 <Label htmlFor={`${uid}vatId`}>{vatLabel}</Label>
               </FieldsetTitle>
-              <Input
-                id={`${uid}vatId`}
-                type="text"
-                value={state.vatId}
-                onChange={(e) => dispatch({ type: "set-value", vatId: e.target.value })}
-                disabled={isProcessing(state)}
-              />
+              {state.country === "BR" ? (
+                <CpfCnpjInput
+                  id={`${uid}vatId`}
+                  value={state.vatId}
+                  onChange={(digits) => dispatch({ type: "set-value", vatId: digits })}
+                  disabled={isProcessing(state)}
+                />
+              ) : (
+                <Input
+                  id={`${uid}vatId`}
+                  type="text"
+                  value={state.vatId}
+                  onChange={(e) => dispatch({ type: "set-value", vatId: e.target.value })}
+                  disabled={isProcessing(state)}
+                />
+              )}
             </Fieldset>
           ) : null}
         </div>

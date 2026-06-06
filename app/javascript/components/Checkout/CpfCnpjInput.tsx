@@ -9,10 +9,11 @@ export type CpfCnpjInputProps = {
   value: string;
   onChange: (digits: string) => void;
   id?: string;
+  disabled?: boolean;
 };
 
 // Renders the formatted CPF/CNPJ to the buyer while keeping the parent's state as raw digits.
-export const CpfCnpjInput = ({ value, onChange, id }: CpfCnpjInputProps) => {
+export const CpfCnpjInput = ({ value, onChange, id, disabled }: CpfCnpjInputProps) => {
   const { t } = useTranslation();
 
   return (
@@ -25,6 +26,7 @@ export const CpfCnpjInput = ({ value, onChange, id }: CpfCnpjInputProps) => {
       aria-label={t("checkout.taxId")}
       value={formatCpfCnpj(value)}
       onChange={(event) => onChange(stripTaxIdFormatting(event.target.value))}
+      disabled={disabled}
     />
   );
 };
