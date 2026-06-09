@@ -13,6 +13,7 @@ import * as BraintreeClient from "braintree-web/client";
 import * as BraintreeDataCollector from "braintree-web/data-collector";
 import * as BraintreePaypal from "braintree-web/paypal";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 import { useBraintreeToken } from "$app/data/braintree_client_token_data";
 import { preparePaymentRequestPaymentMethodData } from "$app/data/card_payment_method_data";
@@ -197,6 +198,7 @@ const ZipCodeInput = () => {
 
 const SharedInputs = ({ className }: { className?: string | undefined }) => {
   const uid = React.useId();
+  const { t } = useTranslation();
   const loggedInUser = useLoggedInUser();
   const [state, dispatch] = useState();
   const errors = getErrors(state);
@@ -236,7 +238,7 @@ const SharedInputs = ({ className }: { className?: string | undefined }) => {
       vatLabel = "Business TRN ID (optional)";
       break;
     case "BR":
-      vatLabel = "CPF / CNPJ (optional)";
+      vatLabel = t("checkout.taxIdOptional");
       break;
     case "AU":
       vatLabel = "Business ABN ID (optional)";
