@@ -103,10 +103,20 @@ already on this branch; wiring it into checkout is independent of settlement cur
 ## Rollout
 
 - Gate behind a feature flag (e.g. `Feature.active?(:brl_settlement, seller)`), defaulting off.
-- Phase 1: settlement plumbing + side table, flag off, no behavior change (specs prove USD path
-  identical).
-- Phase 2: enable for a pilot Brazilian seller; confirm a real BRL charge, refund, and payout in
-  Stripe test mode.
+- Phase 1 — **implemented (specs pending CI)**: settlement plumbing + side table, flag off, no
+  behavior change.
+  - `purchase_settlements` table + `PurchaseSettlement` model (no FK; internal record, no external
+    id; one row per non-USD purchase, absence == USD).
+  - `MerchantAccount#settlement_currency` returns `brl` for a Brazilian Stripe Connect account when
+    `brl_settlement` is active for the seller, `usd` otherwise. With the flag off it is always
+    `usd`, so nothing changes yet.
+  - Specs: `spec/models/purchase_settlement_spec.rb` and the `#settlement_currency` block in
+    `spec/models/merchant_account_spec.rb`. These need a DB and so run in CI, not in this container.
+- Phase 2: wire `settlement_currency` into `create_payment_intent_or_charge!` **with amount
+  conversion** (sending `brl` without converting the USD-derived `amount_cents` would charge the
+  wrong amount — this is why the charge path is deliberately untouched in Phase 1), record a
+  `PurchaseSettlement` row, and make the fee/transfer currencies (~lines 501–536) match. Enable for
+  a pilot Brazilian seller and confirm a real BRL charge, refund, and payout in Stripe test mode.
 - Phase 3: Pix payment method on top (the chargeable exists; add the async purchase state and
   webhook handling from `docs/brazil/pix-integration.md` items 1, 3, 4, 5).
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_24_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_25_000000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "name", limit: 191, null: false
     t.string "record_type", limit: 191, null: false
@@ -1726,6 +1726,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_24_000000) do
     t.string "business_vat_id", limit: 191
     t.string "state_code"
     t.index ["purchase_id"], name: "index_purchase_sales_tax_infos_on_purchase_id"
+  end
+
+  create_table "purchase_settlements", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.bigint "purchase_id", null: false
+    t.string "currency", null: false
+    t.bigint "amount_cents", null: false
+    t.bigint "fee_cents", default: 0, null: false
+    t.decimal "conversion_rate", precision: 18, scale: 9
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["purchase_id"], name: "index_purchase_settlements_on_purchase_id", unique: true
   end
 
   create_table "purchase_taxjar_infos", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
