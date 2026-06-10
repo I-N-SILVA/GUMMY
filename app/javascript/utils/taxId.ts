@@ -1,5 +1,8 @@
 const onlyDigits = (value: string) => value.replace(/\D/gu, "");
 
+// CPF has 11 digits, CNPJ has 14; never keep more than a CNPJ's worth.
+const MAX_TAX_ID_DIGITS = 14;
+
 const applyMask = (digits: string, groups: number[], separators: string[]): string => {
   let result = "";
   let position = 0;
@@ -17,9 +20,11 @@ const applyMask = (digits: string, groups: number[], separators: string[]): stri
 // CNPJ as 00.000.000/0000-00 (12-14 digits). The authoritative checksum validation lives in
 // CpfCnpjValidationService on the server; this is purely presentational masking.
 export const formatCpfCnpj = (value: string): string => {
-  const digits = onlyDigits(value).slice(0, 14);
+  const digits = onlyDigits(value).slice(0, MAX_TAX_ID_DIGITS);
   if (digits.length <= 11) return applyMask(digits, [3, 3, 3, 2], [".", ".", "-"]);
   return applyMask(digits, [2, 3, 3, 4, 2], [".", ".", "/", "-"]);
 };
 
-export const stripTaxIdFormatting = onlyDigits;
+// Strips formatting to raw digits, capped at a CNPJ's length so the value emitted to
+// parent state stays consistent with what formatCpfCnpj displays.
+export const stripTaxIdFormatting = (value: string): string => onlyDigits(value).slice(0, MAX_TAX_ID_DIGITS);
