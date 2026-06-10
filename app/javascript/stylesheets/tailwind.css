@@ -61,6 +61,84 @@
   --logo: url("~images/logo.svg");
   --loading-spinner: url("~images/loading-rainbow.svg");
   --product-cover-placeholder: url("~images/placeholders/product-cover.png");
+
+  /* Premium Brazilian identity tokens (see docs/brazil/visual-identity.md) */
+  --color-brand-emerald: rgb(var(--brand-emerald));
+  --color-brand-gold: rgb(var(--brand-gold));
+  --color-brand-azure: rgb(var(--brand-azure));
+
+  /* Apple-style spring/deceleration easing */
+  --ease-premium: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.5, 1.6, 0.4, 1);
+
+  /* Layered, soft elevation */
+  --shadow-premium: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.08), 0 24px 48px rgb(0 0 0 / 0.06);
+
+  /* Fluid type scale */
+  --text-fluid-sm: clamp(0.875rem, 0.8rem + 0.4vw, 1rem);
+  --text-fluid-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --text-fluid-lg: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  --text-fluid-xl: clamp(1.75rem, 1.2rem + 2.4vw, 3rem);
+  --text-fluid-2xl: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
+}
+
+/* Vibrant multi-point mesh gradient built from the brand palette. */
+@utility bg-mesh {
+  background-color: var(--color-body);
+  background-image:
+    radial-gradient(at 18% 18%, rgb(var(--brand-emerald) / 0.2) 0px, transparent 50%),
+    radial-gradient(at 82% 12%, rgb(var(--brand-azure) / 0.18) 0px, transparent 50%),
+    radial-gradient(at 72% 82%, rgb(var(--brand-gold) / 0.18) 0px, transparent 50%),
+    radial-gradient(at 25% 85%, rgb(var(--brand-emerald) / 0.14) 0px, transparent 50%);
+  background-size: 200% 200%;
+}
+
+/* Frosted, depth-rich surface for cards/sheets. */
+@utility surface-glass {
+  background-color: rgb(var(--filled) / 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgb(var(--color) / 0.08);
+}
+
+/* Slow, calming drift of the mesh background. */
+@utility animate-aurora {
+  animation: aurora 22s var(--ease-premium) infinite alternate;
+}
+
+@keyframes aurora {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Subtle film grain overlay for richness. Apply to a positioned container. */
+@layer utilities {
+  .bg-grain {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .bg-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.35;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora {
+    animation: none;
+  }
 }
 
 @layer base {

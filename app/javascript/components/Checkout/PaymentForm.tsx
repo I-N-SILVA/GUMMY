@@ -13,6 +13,7 @@ import * as BraintreeClient from "braintree-web/client";
 import * as BraintreeDataCollector from "braintree-web/data-collector";
 import * as BraintreePaypal from "braintree-web/paypal";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 import { useBraintreeToken } from "$app/data/braintree_client_token_data";
 import { preparePaymentRequestPaymentMethodData } from "$app/data/card_payment_method_data";
@@ -32,6 +33,7 @@ import { checkEmailForTypos as checkEmailForTyposUtil } from "$app/utils/email";
 import { asyncVoid } from "$app/utils/promise";
 
 import { Button } from "$app/components/Button";
+import { CpfCnpjInput } from "$app/components/Checkout/CpfCnpjInput";
 import { CreditCardInput, StripeElementsProvider } from "$app/components/Checkout/CreditCardInput";
 import { CustomFields } from "$app/components/Checkout/CustomFields";
 import {
@@ -196,6 +198,7 @@ const ZipCodeInput = () => {
 
 const SharedInputs = ({ className }: { className?: string | undefined }) => {
   const uid = React.useId();
+  const { t } = useTranslation();
   const loggedInUser = useLoggedInUser();
   const [state, dispatch] = useState();
   const errors = getErrors(state);
@@ -233,6 +236,9 @@ const SharedInputs = ({ className }: { className?: string | undefined }) => {
     case "AE":
     case "BH":
       vatLabel = "Business TRN ID (optional)";
+      break;
+    case "BR":
+      vatLabel = t("checkout.taxIdOptional");
       break;
     case "AU":
       vatLabel = "Business ABN ID (optional)";
@@ -389,13 +395,22 @@ const SharedInputs = ({ className }: { className?: string | undefined }) => {
               <FieldsetTitle>
                 <Label htmlFor={`${uid}vatId`}>{vatLabel}</Label>
               </FieldsetTitle>
-              <Input
-                id={`${uid}vatId`}
-                type="text"
-                value={state.vatId}
-                onChange={(e) => dispatch({ type: "set-value", vatId: e.target.value })}
-                disabled={isProcessing(state)}
-              />
+              {state.country === "BR" ? (
+                <CpfCnpjInput
+                  id={`${uid}vatId`}
+                  value={state.vatId}
+                  onChange={(digits) => dispatch({ type: "set-value", vatId: digits })}
+                  disabled={isProcessing(state)}
+                />
+              ) : (
+                <Input
+                  id={`${uid}vatId`}
+                  type="text"
+                  value={state.vatId}
+                  onChange={(e) => dispatch({ type: "set-value", vatId: e.target.value })}
+                  disabled={isProcessing(state)}
+                />
+              )}
             </Fieldset>
           ) : null}
         </div>

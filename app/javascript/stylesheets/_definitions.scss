@@ -204,6 +204,16 @@ $light-body-bg: #f4f4f0 !default;
   --form-element-height: #{$form-element-height};
   --transition-duration: 0.14s;
 
+  // Premium Brazilian brand identity. `--accent` drives every accent across the
+  // app; overriding it here (after the $base-colors loop above) re-skins the
+  // product to a refined emerald. The gold/azure tokens feed the mesh-gradient
+  // and aurora utilities defined in tailwind.css.
+  --accent: 0 168 107;
+  --contrast-accent: 255 255 255;
+  --brand-emerald: 0 168 107;
+  --brand-gold: 255 180 0;
+  --brand-azure: 30 115 255;
+
   @media (prefers-color-scheme: dark) {
     --body-bg: #242423;
     --primary: 221 221 221;

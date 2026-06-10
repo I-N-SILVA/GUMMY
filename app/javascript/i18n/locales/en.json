@@ -8,6 +8,7 @@
     "email": "Email",
     "name": "Name",
     "taxId": "Tax ID",
+    "taxIdOptional": "CPF / CNPJ (optional)",
     "awaitingPayment": "Waiting for payment",
     "paymentConfirmed": "Payment confirmed",
     "pixInstructions": "Scan the QR code with your bank app, or copy the code below to pay.",

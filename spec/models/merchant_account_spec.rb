@@ -124,4 +124,28 @@ describe MerchantAccount do
       expect(merchant_account.holder_of_funds).to eq(HolderOfFunds::GUMROAD)
     end
   end
+
+  describe "#settlement_currency" do
+    it "returns usd for a US Stripe account" do
+      expect(create(:merchant_account_stripe_connect, country: "US").settlement_currency).to eq(Currency::USD)
+    end
+
+    context "with a Brazilian Stripe Connect account" do
+      let(:merchant_account) { create(:merchant_account_stripe_connect, country: "BR") }
+
+      it "returns usd while the brl_settlement flag is off" do
+        expect(merchant_account.settlement_currency).to eq(Currency::USD)
+      end
+
+      it "returns brl once the brl_settlement flag is enabled for the seller" do
+        Feature.activate_user(:brl_settlement, merchant_account.user)
+        expect(merchant_account.settlement_currency).to eq(Currency::BRL)
+      end
+
+      it "stays usd when the flag is enabled for a different seller" do
+        Feature.activate_user(:brl_settlement, create(:user))
+        expect(merchant_account.settlement_currency).to eq(Currency::USD)
+      end
+    end
+  end
 end
