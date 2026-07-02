@@ -19,6 +19,7 @@ end
 require_relative "domain"
 require_relative "redis"
 require_relative "../lib/utilities/global_config"
+require_relative "../lib/kami"
 
 module Gumroad
   class Application < Rails::Application
@@ -27,8 +28,8 @@ module Gumroad
     config.active_support.cache_format_version = 7.1
     config.active_storage.variant_processor = :mini_magick
 
-    config.i18n.available_locales = [:en, :"pt-BR"]
-    config.i18n.default_locale = ENV.fetch("DEFAULT_LOCALE", "en").to_sym
+    config.i18n.available_locales = Kami.available_locales
+    config.i18n.default_locale = Kami.default_locale
     config.i18n.fallbacks = [:en]
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do

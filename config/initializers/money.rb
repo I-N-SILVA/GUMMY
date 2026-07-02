@@ -2,7 +2,7 @@
 
 Money.locale_backend = :i18n
 Money.rounding_mode = BigDecimal::ROUND_HALF_UP
-Money.default_currency = ENV.fetch("DEFAULT_CURRENCY", "USD").upcase
+Money.default_currency = Kami.default_currency
 
 # technically KRW does have subunits but they are not used anymore
 # our currencies.yml assumes KRW to have 100 subunits and that's how we store them in the database

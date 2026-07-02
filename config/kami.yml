@@ -1,0 +1,20 @@
+brand:
+  name: Kami
+  tagline: The creator economy, made for Brazil
+
+locales:
+  default: en
+  available:
+    - en
+    - pt-BR
+  aliases:
+    pt: pt-BR
+
+currency:
+  default: USD
+
+modules:
+  pix: true
+  cpf_cnpj: true
+  brl_settlement: true
+  premium_theme: true

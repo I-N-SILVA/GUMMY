@@ -59,9 +59,11 @@ class MerchantAccount < ApplicationRecord
   end
 
   # Currency that charges to this account settle in. Brazilian Stripe Connect accounts settle in
-  # BRL (required for Pix); everything else settles in USD. Gated by the brl_settlement flag so
-  # behavior is unchanged until the flag is enabled for a seller.
+  # BRL (required for Pix); everything else settles in USD. Double-gated: the platform must ship
+  # the brl_settlement module (config/kami.yml) and the seller must have the brl_settlement
+  # Feature flag, so behavior is unchanged until both are enabled.
   def settlement_currency
+    return Currency::USD unless Kami.module_enabled?(:brl_settlement)
     return Currency::USD unless is_a_brazilian_stripe_connect_account?
     return Currency::USD unless Feature.active?(:brl_settlement, user)
 

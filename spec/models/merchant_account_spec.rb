@@ -146,6 +146,12 @@ describe MerchantAccount do
         Feature.activate_user(:brl_settlement, create(:user))
         expect(merchant_account.settlement_currency).to eq(Currency::USD)
       end
+
+      it "stays usd when the platform brl_settlement module is disabled" do
+        Feature.activate_user(:brl_settlement, merchant_account.user)
+        allow(Kami).to receive(:module_enabled?).with(:brl_settlement).and_return(false)
+        expect(merchant_account.settlement_currency).to eq(Currency::USD)
+      end
     end
   end
 end

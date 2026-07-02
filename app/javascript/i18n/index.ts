@@ -1,18 +1,12 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import { DEFAULT_LOCALE, normalizeLocale } from "$app/kami/config";
+
 import en from "./locales/en.json";
 import ptBR from "./locales/pt-BR.json";
 
-export const DEFAULT_LOCALE = "en";
-export const SUPPORTED_LOCALES = ["en", "pt-BR"] as const;
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
-
-function normalizeLocale(locale: string | undefined): SupportedLocale {
-  if (!locale) return DEFAULT_LOCALE;
-  if (locale.toLowerCase().startsWith("pt")) return "pt-BR";
-  return SUPPORTED_LOCALES.find((supported) => supported === locale) ?? DEFAULT_LOCALE;
-}
+export { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from "$app/kami/config";
 
 let initialized = false;
 

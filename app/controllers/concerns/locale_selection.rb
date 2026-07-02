@@ -28,13 +28,6 @@ module LocaleSelection
       return unless header
 
       requested = header.split(",").map { |part| part.split(";").first.to_s.strip }
-      requested.map! { |tag| normalize_locale_tag(tag) }
-      requested.find { |locale| I18n.available_locales.include?(locale) }
-    end
-
-    def normalize_locale_tag(tag)
-      return :"pt-BR" if tag.downcase.start_with?("pt")
-
-      tag.split("-").first.to_s.downcase.to_sym
+      requested.filter_map { |tag| Kami.normalize_locale(tag) }.first
     end
 end
