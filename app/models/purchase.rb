@@ -3141,6 +3141,7 @@ class Purchase < ApplicationRecord
         end
         save!
         credit_card.update!(json_data: { stripe_payment_intent_id: charge_intent.id }) if credit_card&.requires_mandate? && mandate_options.present?
+        PurchaseSettlement.record_for(self, charge_intent.settlement)
 
         charge_intent
       end

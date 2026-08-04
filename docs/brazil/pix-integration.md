@@ -46,13 +46,15 @@ Unlike a card authorization, Pix is asynchronous:
 
 ## Remaining work
 
-### 1. BRL currency path
-`StripeChargeProcessor#create_payment_intent_or_charge!`
-(`app/business/payments/charging/implementations/stripe/stripe_charge_processor.rb:219`)
-hardcodes `currency: "usd"`. Stripe Pix only settles in `brl`. The Pix path must send
-`currency: "brl"` with the amount in BRL cents. This is the largest piece, because the
-surrounding purchase/charge pipeline assumes USD settlement — audit `Purchase` amount fields
-and `app/services/order/create_service.rb` for the conversion points before changing this.
+### 1. BRL currency path — done
+`create_payment_intent_or_charge!` no longer hardcodes `currency: "usd"`. It sends
+`merchant_account.settlement_currency` with the amount, application fee, and destination transfer all
+converted at one rate by `SettlementConversion`, and records the result on the purchase via
+`PurchaseSettlement`. A Brazilian Stripe Connect account with the `brl_settlement` flag on therefore
+produces a `brl` intent, which is what Pix requires. See
+`docs/brazil/multi-currency-settlement.md` (Phase 2) for the design and, importantly, for the two
+items that must be closed before the flag can be enabled for a real seller — partial refunds of
+non-USD charges currently raise rather than refund the wrong amount.
 
 ### 2. Pix chargeable — done
 See the "Done" section above. `StripeChargeablePix` exists and is wired into

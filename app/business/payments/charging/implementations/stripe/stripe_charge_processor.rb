@@ -216,9 +216,18 @@ class StripeChargeProcessor
                                        transfer_group: nil, off_session: true, setup_future_charges: false, mandate_options: nil)
     should_setup_future_usage = setup_future_charges && !off_session # attempting to set up future usage during an off-session charge will result in an invalid request
 
+    # The amounts reaching here are USD. An account that settles in another currency needs them
+    # expressed in that currency, converted once so the charge, the application fee, and the
+    # destination transfer below all use the same rate. Accounts that settle in USD (every account
+    # until brl_settlement is enabled) get the amounts back unchanged and `currency` is still "usd",
+    # leaving these params identical to before.
+    settlement = SettlementConversion.for(merchant_account)
+    settlement_amount_cents = settlement.convert(amount_cents)
+    settlement_amount_for_gumroad_cents = settlement.convert(amount_for_gumroad_cents)
+
     params = {
-      amount: amount_cents,
-      currency: "usd",
+      amount: settlement_amount_cents,
+      currency: settlement.currency,
       description:,
       metadata: metadata || {
         purchase: reference
@@ -256,7 +265,7 @@ class StripeChargeProcessor
           raise "Merchant Account #{merchant_account.external_id} assigned to user #{merchant_account.user.external_id} "\
               "but has no Charge Processor Merchant ID."
         end
-        params[:application_fee_amount] = amount_for_gumroad_cents
+        params[:application_fee_amount] = settlement_amount_for_gumroad_cents
         payment_intent = Stripe::PaymentIntent.create(params, { stripe_account: merchant_account.charge_processor_merchant_id })
       elsif merchant_account.user
         if merchant_account.charge_processor_merchant_id.blank?
@@ -265,7 +274,7 @@ class StripeChargeProcessor
         end
         params[:transfer_data] = {
           destination: merchant_account.charge_processor_merchant_id,
-          amount: amount_cents - amount_for_gumroad_cents
+          amount: settlement_amount_cents - settlement_amount_for_gumroad_cents
         }
         payment_intent = Stripe::PaymentIntent.create(params)
       else
@@ -274,7 +283,9 @@ class StripeChargeProcessor
 
       payment_intent.confirm if payment_intent.status == StripeIntentStatus::REQUIRES_CONFIRMATION
 
-      StripeChargeIntent.new(payment_intent:, merchant_account:)
+      # Carried on the intent rather than recomputed by the caller so the settlement recorded against
+      # the purchase uses the same rate this charge was actually created with.
+      StripeChargeIntent.new(payment_intent:, merchant_account:).tap { _1.settlement = settlement }
     end
   end
 
@@ -388,7 +399,19 @@ class StripeChargeProcessor
     params = {
       charge: charge_id
     }
-    params[:amount] = amount_cents if amount_cents.present?
+    if amount_cents.present?
+      # Callers pass USD cents, but Stripe refunds in the charge's own currency, so a partial refund
+      # of a non-USD charge would refund the wrong amount. Converting at today's rate is not correct
+      # either: the refund must use the rate the charge settled at, which lives on the purchase's
+      # PurchaseSettlement and is not reachable from a bare charge id. Until partial refunds are made
+      # settlement-aware, fail loudly rather than move the wrong amount of money. Full refunds are
+      # unaffected — they send no amount and Stripe refunds the charge in full.
+      if stripe_charge.currency != Currency::USD
+        raise ChargeProcessorError, "Partial refund of #{charge_id} settled in #{stripe_charge.currency} is not supported"
+      end
+
+      params[:amount] = amount_cents
+    end
     params[:reason] = REFUND_REASON_FRAUDULENT if is_for_fraud.present?
 
     # For Stripe-Connect:

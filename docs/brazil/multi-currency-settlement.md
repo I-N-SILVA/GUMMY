@@ -112,11 +112,46 @@ already on this branch; wiring it into checkout is independent of settlement cur
     `usd`, so nothing changes yet.
   - Specs: `spec/models/purchase_settlement_spec.rb` and the `#settlement_currency` block in
     `spec/models/merchant_account_spec.rb`. These need a DB and so run in CI, not in this container.
-- Phase 2: wire `settlement_currency` into `create_payment_intent_or_charge!` **with amount
-  conversion** (sending `brl` without converting the USD-derived `amount_cents` would charge the
-  wrong amount — this is why the charge path is deliberately untouched in Phase 1), record a
-  `PurchaseSettlement` row, and make the fee/transfer currencies (~lines 501–536) match. Enable for
-  a pilot Brazilian seller and confirm a real BRL charge, refund, and payout in Stripe test mode.
+- Phase 2 — **implemented (specs pending a DB + Stripe environment)**: the charge path now settles in
+  the merchant account's currency.
+  - `SettlementConversion` (`app/business/payments/settlement_conversion.rb`) converts USD cents into
+    the settlement currency. It looks the rate up once per instance and reuses it, so the charge
+    amount, the application fee, and the destination transfer of one charge cannot disagree because
+    the rate moved between lookups. USD skips the lookup entirely, so the existing USD path gains no
+    Redis or exchange-rate HTTP dependency.
+  - `StripeChargeProcessor#create_payment_intent_or_charge!` replaces `currency: "usd"` and the raw
+    `amount` / `application_fee_amount` / `transfer_data[:amount]` with converted values. With
+    `brl_settlement` off, `settlement_currency` is `usd` and `convert` is the identity, so the params
+    are unchanged for every existing seller.
+  - The `SettlementConversion` is carried on the returned `ChargeIntent#settlement` rather than
+    recomputed by callers, so the row recorded against the purchase uses the rate the charge was
+    actually created with.
+  - `PurchaseSettlement.record_for` writes the row, from `Purchase#create_charge_intent` (single
+    charge) and `Charge::CreateService` (combined charge). Each purchase records its own converted
+    share, not the charge total, so a combined charge yields per-purchase rows. USD settlement writes
+    nothing — absence still means USD.
+  - Specs: `spec/business/payments/settlement_conversion_spec.rb`, the `.record_for` block in
+    `spec/models/purchase_settlement_spec.rb`, and the "settlement currency" block in
+    `spec/business/payments/charging/implementations/stripe/stripe_charge_processor_spec.rb`.
+
+### Must be closed before `brl_settlement` is enabled for any seller
+
+**Partial refunds.** `StripeChargeProcessor#refund!` receives `amount_cents` in USD, but Stripe
+refunds in the charge's own currency, so a partial refund of a BRL charge would refund the wrong
+amount. Converting at today's rate is also wrong — the refund has to use the rate the charge settled
+at, which lives on the charge's `PurchaseSettlement` and is not reachable from the bare `charge_id`
+that `refund!` is given. `refund!` therefore now **raises** `ChargeProcessorError` on a partial refund
+of a non-USD charge rather than moving the wrong amount. Full refunds are unaffected: they send no
+amount and Stripe refunds the charge in full. Making partial refunds settlement-aware (threading the
+purchase, or its recorded rate, into `refund!`) is a prerequisite for enabling the flag.
+
+**Fees and transfers outside the charge path.** The `currency: "usd"` literals around
+`stripe_charge_processor.rb` lines 500–540 are the backtax-collection transfers, a separate flow from
+charge settlement, and are untouched here. They need auditing against a BRL local balance before a
+Brazilian seller goes live.
+
+- Phase 2b: enable for a pilot Brazilian seller and confirm a real BRL charge, refund, and payout in
+  Stripe test mode.
 - Phase 3: Pix payment method on top (the chargeable exists; add the async purchase state and
   webhook handling from `docs/brazil/pix-integration.md` items 1, 3, 4, 5).
 

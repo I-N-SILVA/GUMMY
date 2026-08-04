@@ -8,7 +8,9 @@
 # For other charge-based APIs (PayPal, Braintree) that don't have this notion of "intent" - and result in an
 # immediate charge - we wrap the `charge` object in a `ChargeIntent` and set `succeeded` to `true` immediately.
 class ChargeIntent
-  attr_accessor :id, :payment_intent, :charge, :client_secret
+  # `settlement` is the SettlementConversion the charge was created with, present only on intents we
+  # just created (it is unknowable when rebuilding an intent from a webhook or a later retrieve).
+  attr_accessor :id, :payment_intent, :charge, :client_secret, :settlement
 
   def requires_action?
     false

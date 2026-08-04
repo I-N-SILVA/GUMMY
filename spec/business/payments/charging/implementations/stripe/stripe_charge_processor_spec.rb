@@ -757,6 +757,70 @@ describe StripeChargeProcessor, :vcr do
       subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 0_30, "reference", "test description")
     end
 
+    describe "settlement currency" do
+      before do
+        $currency_namespace = Redis::Namespace.new(:currencies, redis: $redis)
+        $currency_namespace.set("BRL", 5.5)
+      end
+
+      it "charges in usd on an account that settles in usd" do
+        expect(Stripe::PaymentIntent).to receive(:create).with(hash_including(amount: 1_00, currency: "usd")).and_call_original
+        subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description")
+      end
+
+      it "reports the returned intent as usd-settled" do
+        charge_intent = subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description")
+
+        expect(charge_intent.settlement).to be_usd
+        expect(charge_intent.settlement.conversion_rate).to be_nil
+      end
+
+      describe "on an account that settles in brl" do
+        let(:user) { create(:user) }
+        let(:merchant_account) { create(:merchant_account_stripe_connect, user:, country: "BR") }
+        let(:payment_intent) do
+          double(id: "pi_brl", client_secret: "pi_brl_secret", status: StripeIntentStatus::PROCESSING, next_action: nil)
+        end
+
+        before { Feature.activate_user(:brl_settlement, user) }
+
+        it "converts the charge amount into brl" do
+          expect(Stripe::PaymentIntent).to receive(:create)
+            .with(hash_including(amount: 5_50, currency: "brl"), anything)
+            .and_return(payment_intent)
+
+          subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description")
+        end
+
+        it "converts the application fee at the same rate as the charge" do
+          expect(Stripe::PaymentIntent).to receive(:create)
+            .with(hash_including(application_fee_amount: 1_65), anything)
+            .and_return(payment_intent)
+
+          subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description")
+        end
+
+        it "carries the currency and rate used on the returned intent" do
+          allow(Stripe::PaymentIntent).to receive(:create).and_return(payment_intent)
+
+          charge_intent = subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description")
+
+          expect(charge_intent.settlement.currency).to eq(Currency::BRL)
+          expect(charge_intent.settlement.conversion_rate).to eq("5.5")
+        end
+
+        it "charges in usd while the brl_settlement flag is off for the seller" do
+          Feature.deactivate_user(:brl_settlement, user)
+
+          expect(Stripe::PaymentIntent).to receive(:create)
+            .with(hash_including(amount: 1_00, currency: "usd"), anything)
+            .and_return(payment_intent)
+
+          subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description")
+        end
+      end
+    end
+
     describe "on the merchant account mirroring a Stripe managed account" do
       let(:user) { create(:user) }
       let(:stripe_account) { create_verified_stripe_account(country: "US") }
@@ -1076,6 +1140,28 @@ describe StripeChargeProcessor, :vcr do
     let(:payment_method_id) { StripePaymentMethodHelper.success.to_stripejs_payment_method_id }
     let(:stripe_charge) { create_stripe_charge(payment_method_id, amount: amount_cents, currency:) }
     let(:charge_id) { stripe_charge.id }
+
+    # Callers pass USD cents, but Stripe refunds in the charge's own currency, so a partial refund of
+    # a charge that settled elsewhere would move the wrong amount of money.
+    describe "partial refund of a charge that did not settle in usd" do
+      before do
+        allow(Stripe::Charge).to receive(:retrieve).and_return(double(currency: Currency::BRL, destination: nil))
+      end
+
+      it "raises instead of refunding a usd amount against a brl charge" do
+        expect(Stripe::Refund).not_to receive(:create)
+
+        expect { subject.refund!("ch_brl", amount_cents: 5_00) }
+          .to raise_error(ChargeProcessorError, /settled in brl/)
+      end
+
+      it "allows a full refund, which stripe issues in the charge's own currency" do
+        expect(Stripe::Refund).to receive(:create).with({ charge: "ch_brl" }).and_return(double(id: "re_brl"))
+        allow(subject).to receive(:get_refund).and_return(nil)
+
+        subject.refund!("ch_brl")
+      end
+    end
 
     describe "full refund" do
       it "calls refund on the stripe charge without an amount" do

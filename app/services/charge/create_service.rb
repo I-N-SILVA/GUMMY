@@ -63,6 +63,12 @@ class Charge::CreateService
       end
 
       charge.save!
+
+      # One combined charge covers several purchases, so each records its own converted share at the
+      # rate the charge was created with rather than the charge total. A setup intent carries no
+      # settlement, having moved no money.
+      settlement = charge_intent.try(:settlement)
+      purchases.each { PurchaseSettlement.record_for(_1, settlement) }
     end
     charge
   end
