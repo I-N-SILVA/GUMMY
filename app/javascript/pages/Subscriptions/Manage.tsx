@@ -3,7 +3,7 @@ import { parseISO } from "date-fns";
 import * as React from "react";
 import { cast } from "ts-safe-cast";
 
-import { confirmLineItem } from "$app/data/purchase";
+import { cardParamsFor, confirmLineItem } from "$app/data/purchase";
 import { updateSubscription } from "$app/data/subscription";
 import { SavedCreditCard } from "$app/parsers/card";
 import { Discount } from "$app/parsers/checkout";
@@ -47,6 +47,7 @@ type Props = {
     require_shipping: boolean;
     custom_fields: CustomFieldDescriptor[];
     supports_paypal: "native" | "braintree" | null;
+    local_payment_methods: string[];
     creator: Creator;
     currency_code: CurrencyCode;
     options: Option[];
@@ -202,6 +203,7 @@ export default function SubscriptionsManage() {
     customFields: [], // Custom fields were already collected during original purchase
     bundleProductCustomFields: [],
     supportsPaypal: product.supports_paypal,
+    localPaymentMethods: product.local_payment_methods,
     testPurchase: subscription.is_test,
     requirePayment,
     subscription_id: subscription.id,
@@ -246,10 +248,7 @@ export default function SubscriptionsManage() {
   async function pay() {
     if (state.status.type !== "finished") return;
     const result = await updateSubscription({
-      cardParams:
-        state.status.paymentMethod.type === "not-applicable" || state.status.paymentMethod.type === "saved"
-          ? null
-          : state.status.paymentMethod.cardParamsResult.cardParams,
+      cardParams: cardParamsFor(state.status.paymentMethod),
       recaptchaResponse: state.status.recaptchaResponse ?? null,
       declined: url.searchParams.get("declined") === "true",
       subscription_id: subscription.id,

@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { cardParamsFor } from "$app/data/purchase";
 import { ProductNativeType } from "$app/parsers/product";
 
 import type { Creator, Result } from "$app/components/Checkout/cartState";
@@ -40,11 +41,7 @@ export const TemporaryLibrary = ({ results, canBuyerSignUp }: { results: Result[
                 <CreateAccountForm
                   createAccountData={{
                     email: state.email,
-                    cardParams:
-                      state.status.paymentMethod.type === "not-applicable" ||
-                      state.status.paymentMethod.type === "saved"
-                        ? null
-                        : state.status.paymentMethod.cardParamsResult.cardParams,
+                    cardParams: cardParamsFor(state.status.paymentMethod),
                   }}
                   className="grow"
                 />

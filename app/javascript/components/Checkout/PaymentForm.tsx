@@ -1,4 +1,4 @@
-import { Apple, CreditCard, Google, Paypal } from "@boxicons/react";
+import { Apple, CreditCard, Google, Paypal, QrScan } from "@boxicons/react";
 import { loadScript as loadPaypal, PayPalNamespace } from "@paypal/paypal-js";
 import { useStripe } from "@stripe/react-stripe-js";
 import {
@@ -46,6 +46,7 @@ import {
   PaymentMethodType,
   requiresPayment,
   requiresReusablePaymentMethod,
+  supportsLocalPaymentMethod,
   usePayLabel,
   useState,
 } from "$app/components/Checkout/payment";
@@ -751,7 +752,7 @@ const CreditCardContent = () => {
   );
 };
 
-const CreditCardPayButtonContent = ({ isTestPurchase }: { isTestPurchase?: boolean }) => {
+const PayButtonContent = ({ isTestPurchase }: { isTestPurchase?: boolean }) => {
   const [state, dispatch] = useState();
   const payLabel = usePayLabel();
 
@@ -768,6 +769,23 @@ const CreditCardPayButtonContent = ({ isTestPurchase }: { isTestPurchase?: boole
       ) : null}
     </div>
   );
+};
+
+const PixContent = () => {
+  const [state, dispatch] = useState();
+  const { t } = useTranslation();
+
+  React.useEffect(() => {
+    dispatch({ type: "add-payment-method", paymentMethod: { type: "pix", button: null } });
+  }, []);
+
+  React.useEffect(() => {
+    if (state.status.type !== "starting" || state.paymentMethod !== "pix") return;
+    // Nothing is tokenized in the browser for Pix, so the method is ready as soon as it is chosen.
+    dispatch({ type: "set-payment-method", paymentMethod: { type: "pix" } });
+  }, [state.status.type]);
+
+  return <p className="text-muted">{t("checkout.pixSelectedNotice")}</p>;
 };
 
 const BraintreePayPal = ({ token }: { token: string }) => {
@@ -1169,7 +1187,8 @@ const PaymentMethodsSection = ({
   const [state] = useState();
   const { canPay, isGooglePay } = useStripePaymentRequest();
 
-  const hasMultiplePaymentMethods = isPayPalAvailable || canPay;
+  const isPixAvailable = supportsLocalPaymentMethod(state, "pix");
+  const hasMultiplePaymentMethods = isPayPalAvailable || canPay || isPixAvailable;
 
   return (
     <>
@@ -1196,10 +1215,22 @@ const PaymentMethodsSection = ({
             />
           </div>
         ) : null}
+        {isPixAvailable ? (
+          <div className="border-t border-border">
+            <PaymentMethodRadioRow paymentMethod="pix" label="Pix" icon={<QrScan className="size-5" />} />
+            {state.paymentMethod === "pix" ? (
+              <div className="bg-body p-4 pt-0">
+                <PixContent />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <StripePaymentRequestRadioOption canPay={canPay} isGooglePay={isGooglePay} />
       </div>
       {state.paymentMethod === "paypal" ? <PayPalContent /> : null}
-      {state.paymentMethod === "card" ? <CreditCardPayButtonContent isTestPurchase={isTestPurchase} /> : null}
+      {state.paymentMethod === "card" || state.paymentMethod === "pix" ? (
+        <PayButtonContent isTestPurchase={isTestPurchase} />
+      ) : null}
       <StripePaymentRequestPayButton canPay={canPay} />
     </>
   );

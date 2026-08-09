@@ -15,7 +15,8 @@
     "pixCopyCode": "Copiar código Pix",
     "pixCodeCopied": "Copiado!",
     "pixExpiresIn": "Expira em {{time}}",
-    "pixExpired": "Este código Pix expirou. Inicie um novo pagamento."
+    "pixExpired": "Este código Pix expirou. Inicie um novo pagamento.",
+    "pixSelectedNotice": "Ao continuar, você receberá um QR code para pagar no app do seu banco."
   },
   "common": {
     "loading": "Carregando…",

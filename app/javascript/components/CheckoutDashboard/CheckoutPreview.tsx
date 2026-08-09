@@ -51,6 +51,7 @@ export const CheckoutPreview = ({
             creator: cartItem.product.creator,
             requireShipping: cartItem.product.require_shipping,
             supportsPaypal: null,
+            localPaymentMethods: [],
             customFields: cartItem.product.custom_fields,
             bundleProductCustomFields: [],
             testPurchase: false,

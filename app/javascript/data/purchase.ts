@@ -11,6 +11,11 @@ import { ProductToAdd } from "$app/components/Checkout/cartState";
 
 export type PurchasePaymentMethod = AnyPaymentMethodResult | { type: "not-applicable" };
 
+// Saved cards, local methods such as Pix, and free purchases carry no card params to hand over:
+// there is nothing tokenized in the browser for them.
+export const cardParamsFor = (paymentMethod: PurchasePaymentMethod) =>
+  "cardParamsResult" in paymentMethod ? paymentMethod.cardParamsResult.cardParams : null;
+
 export type SuccessfulLineItemResult = {
   success: true;
 } & ConfirmedPurchaseResponse;
@@ -273,7 +278,15 @@ export const createPurchasesRequestData = (
     data.gift_note = payload.giftInfo.giftNote;
   }
 
-  if (payload.paymentMethod.type !== "saved" && payload.paymentMethod.type !== "not-applicable") {
+  if (payload.paymentMethod.type === "pix") {
+    // Nothing is collected in the browser for Pix. The backend builds the intent and Stripe returns
+    // a code for the buyer to pay in their banking app.
+    data.pix = true;
+    if (payload.zipCode) {
+      data.cc_zipcode_required = true;
+      data.cc_zipcode = payload.zipCode;
+    }
+  } else if ("cardParamsResult" in payload.paymentMethod) {
     const { cardParamsResult } = payload.paymentMethod;
 
     const paymentParams = cardParamsResult.cardParams;

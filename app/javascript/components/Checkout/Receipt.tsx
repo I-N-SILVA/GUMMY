@@ -2,6 +2,7 @@ import { XCircle } from "@boxicons/react";
 import * as React from "react";
 
 import { createAccount, CreateAccountPayload } from "$app/data/account";
+import { cardParamsFor } from "$app/data/purchase";
 import type { ErrorLineItemResult, LineItemResult, SuccessfulLineItemResult } from "$app/data/purchase";
 import { trackUserProductAction } from "$app/data/user_action_event";
 import { classNames } from "$app/utils/classNames";
@@ -320,10 +321,7 @@ export const Receipt = ({
           <CreateAccountForm
             createAccountData={{
               email: state.email,
-              cardParams:
-                state.status.paymentMethod.type === "not-applicable" || state.status.paymentMethod.type === "saved"
-                  ? null
-                  : state.status.paymentMethod.cardParamsResult.cardParams,
+              cardParams: cardParamsFor(state.status.paymentMethod),
             }}
           />
         </CardContent>
