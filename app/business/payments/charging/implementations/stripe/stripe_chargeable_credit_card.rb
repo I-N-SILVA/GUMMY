@@ -64,6 +64,10 @@ class StripeChargeableCreditCard
     country == "IN"
   end
 
+  def can_be_charged_off_session?
+    true
+  end
+
   # We always save the payment methods linked to our platform account. They must be
   # first cloned to the connected account before attempting a direct charge.
   # https://stripe.com/docs/payments/payment-methods/connect#cloning-payment-methods

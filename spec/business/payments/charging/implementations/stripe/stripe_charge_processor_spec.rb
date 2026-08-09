@@ -773,6 +773,28 @@ describe StripeChargeProcessor, :vcr do
       subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 0_30, "reference", "test description")
     end
 
+    describe "a chargeable the buyer must complete themselves" do
+      let(:chargeable) { StripeChargeablePix.new(zip_code: "01310-100") }
+
+      # A multi-seller cart asks for off_session to avoid repeated SCA prompts. Confirming a Pix
+      # intent with no buyer attached would fail at Stripe.
+      it "is charged on-session even when the caller asked for off_session" do
+        expect(Stripe::PaymentIntent).to receive(:create)
+          .with(hash_including(off_session: false), any_args)
+          .and_return(double(id: "pi_pix", client_secret: "pi_pix_secret", status: StripeIntentStatus::PROCESSING, next_action: nil))
+
+        subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description", off_session: true)
+      end
+
+      it "does not ask stripe to confirm the intent without the buyer" do
+        expect(Stripe::PaymentIntent).to receive(:create)
+          .with(hash_not_including(confirm: true), any_args)
+          .and_return(double(id: "pi_pix", client_secret: "pi_pix_secret", status: StripeIntentStatus::PROCESSING, next_action: nil))
+
+        subject.create_payment_intent_or_charge!(merchant_account, chargeable, 1_00, 30, "reference", "test description", off_session: true)
+      end
+    end
+
     describe "settlement currency" do
       before do
         $currency_namespace = Redis::Namespace.new(:currencies, redis: $redis)

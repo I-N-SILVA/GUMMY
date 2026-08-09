@@ -1814,7 +1814,7 @@ class Purchase < ApplicationRecord
 
     save_charge_data(charge_intent.charge, chargeable:) if charge_intent.succeeded?
 
-    unless charge_intent.succeeded? || charge_intent.requires_action? || (charge_intent.is_a?(StripeChargeIntent) && charge_intent.processing?)
+    unless charge_intent.succeeded? || charge_intent.pending_confirmation?
       errors.add :base, "Sorry, something went wrong."
     end
   end
@@ -1916,6 +1916,17 @@ class Purchase < ApplicationRecord
 
   def requires_sca?
     setup_intent&.requires_action? || charge_intent&.requires_action?
+  end
+
+  # Broader than requires_sca?: an asynchronous method such as Pix leaves the buyer to pay in their
+  # banking app, which is not SCA but must still keep the purchase in_progress until the webhook
+  # confirms it. Completing such a purchase in checkout would credit the seller before payment.
+  def awaiting_payment_confirmation?
+    charge_intent&.pending_confirmation? || setup_intent&.requires_action?
+  end
+
+  def time_to_complete_payment
+    charge_intent&.time_to_complete || ChargeProcessor::TIME_TO_COMPLETE_SCA
   end
 
   def time_fields

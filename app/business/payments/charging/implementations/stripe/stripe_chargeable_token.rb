@@ -116,6 +116,10 @@ class StripeChargeableToken
     country == "IN"
   end
 
+  def can_be_charged_off_session?
+    true
+  end
+
   private
     def get_merchant_account(permalink)
       return unless permalink

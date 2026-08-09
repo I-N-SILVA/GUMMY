@@ -37,4 +37,11 @@ class StripeChargeablePix
   def requires_mandate?
     false
   end
+
+  # The buyer has to scan the code in their banking app, so there is nothing to charge without them
+  # present. A multi-seller cart charges off-session to avoid repeated SCA prompts, which would
+  # otherwise ask Stripe to confirm a Pix intent with no buyer attached.
+  def can_be_charged_off_session?
+    false
+  end
 end

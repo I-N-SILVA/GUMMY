@@ -57,17 +57,34 @@ items that must be closed before the flag can be enabled for a real seller — p
 non-USD charges currently raise rather than refund the wrong amount.
 
 ### 2. Pix chargeable — done
-See the "Done" section above. `StripeChargeablePix` exists and is wired into
-`StripeChargeProcessor#get_chargeable_for_params`. Still open from the original note:
-`off_session` must be forced to false for Pix and `can_be_saved?` should treat Pix as
-unsaveable — both belong with the purchase-state work in item 3, where the charge is actually
-created and confirmed.
+`StripeChargeablePix` exists and is reached through the `LocalPaymentMethod` catalog rather than a
+hardcoded branch. `reusable_token!` already returned nil, and `can_be_charged_off_session?` now
+returns false, so a multi-seller cart — which requests `off_session` to avoid repeated SCA prompts —
+can no longer ask Stripe to confirm a Pix intent with no buyer attached.
 
-### 3. Purchase "in progress / awaiting payment" state
-Because confirmation is async, the purchase must hold in a pending state after the intent is
-created and only succeed when the webhook arrives. Reuse the SCA "in progress" machinery that
-`FailAbandonedPurchaseWorker` already exercises, and confirm a Pix-specific expiry aligned with
-`pix_expires_at`.
+### 3. Purchase "awaiting payment" state — done
+A Pix intent sits in `requires_action` with a `pix_display_qr_code` next action. `requires_action?`
+deliberately means "needs SCA via stripe.js" and so excludes it, and `processing?` is false too, which
+meant every place that decides whether a purchase may complete treated a Pix purchase as neither
+pending nor successful. Two consequences, both fixed:
+
+- `Purchase::CompletionHandler#ensure_completion` and `Purchase#charge!` would have **failed** the
+  purchase the moment checkout finished.
+- `Purchase::CreateService` gates on `requires_sca?`, which is false for Pix, so it would have called
+  `handle_purchase_success` → `update_balance_and_mark_successful!`, **crediting the seller and
+  delivering the product before the buyer had paid anything**.
+
+`ChargeIntent#pending_confirmation?` now names the state those call sites actually care about — the
+charge exists but its outcome arrives later — and covers SCA, `processing`, and the Pix QR alike.
+`Purchase#awaiting_payment_confirmation?` is the purchase-level equivalent used where `requires_sca?`
+was standing in for it.
+
+Abandonment respects the method's own deadline: `ChargeIntent#time_to_complete` defaults to
+`TIME_TO_COMPLETE_SCA` (15 minutes) but returns the remaining time on `pix_expires_at` for a Pix
+intent, floored at the SCA window. Scheduling `FailAbandonedPurchaseWorker` at 15 minutes would
+otherwise cancel a Pix charge the buyer could still legitimately pay. The worker itself needed no
+change: its early-run guard only prevents running *before* the SCA window, never forces a cancel at
+it.
 
 ### 4. Webhook routing
 `StripeChargeProcessor.handle_stripe_event` (line 674) already turns Stripe charge events into
@@ -76,11 +93,28 @@ created and only succeed when the webhook arrives. Reuse the SCA "in progress" m
 Pix produces a `TYPE_CHARGE_SUCCEEDED` event and marks the purchase paid. Add handling for the
 expiry/cancellation case.
 
-### 5. Frontend (checkout)
-The presentational `PixPayment` component exists. What remains is integration: add a Pix option to
-the payment selector in `PaymentForm.tsx`, pass the intent's `pix_qr_code` / `pix_qr_code_image_url` /
-`pix_expires_at` from the backend (these must be serialized into the order/charge response), and poll
-or subscribe until the purchase is confirmed so `status` flips from `awaiting` to `confirmed`.
+### 5. Frontend (checkout) — backend contract done, UI outstanding
+`Order::ChargeService` now returns a Pix branch alongside the SCA ones, carrying no error but
+signalling that checkout is unfinished:
+
+```json
+{ "success": true, "requires_pix_payment": true,
+  "pix": { "qr_code": "...", "qr_code_image_url": "...", "expires_at": "..." },
+  "order": { "id": "..." } }
+```
+
+`success: true` with a `requires_*` flag follows the convention the `requires_card_action` and
+`requires_card_setup` branches already use. Without this branch a pending Pix purchase fell through
+to `purchase.purchase_response` and read as a completed sale.
+
+What remains is the UI: **checkout never sends `params[:pix]` today**, so Pix is unreachable by
+buyers no matter what the backend supports. `PaymentForm.tsx` needs a Pix option, driven by
+`LocalPaymentMethod.available_for(merchant_account)` rather than a hardcoded country test, and the
+existing presentational `PixPayment` component needs wiring to the response above plus polling until
+the purchase is confirmed, so `status` flips from `awaiting` to `confirmed`.
+
+When a second asynchronous method is added, this response shape should generalize — the flag and the
+payload are Pix-specific today because generalizing from one example would be guesswork.
 
 ### 6. Tests
 Add VCR-backed specs (scoped per file) for chargeable creation and the processing -> succeeded

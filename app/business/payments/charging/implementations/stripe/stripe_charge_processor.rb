@@ -214,6 +214,10 @@ class StripeChargeProcessor
   def create_payment_intent_or_charge!(merchant_account, chargeable, amount_cents, amount_for_gumroad_cents, reference,
                                        description, metadata: nil, statement_description: nil,
                                        transfer_group: nil, off_session: true, setup_future_charges: false, mandate_options: nil)
+    # A method the buyer has to complete themselves cannot be charged with them absent, whatever the
+    # caller asked for — a multi-seller cart requests off_session to avoid repeated SCA prompts.
+    off_session &&= chargeable.can_be_charged_off_session?
+
     should_setup_future_usage = setup_future_charges && !off_session # attempting to set up future usage during an off-session charge will result in an invalid request
 
     # The amounts reaching here are USD. An account that settles in another currency needs them

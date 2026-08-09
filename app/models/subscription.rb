@@ -304,12 +304,12 @@ class Subscription < ApplicationRecord
         # schedule for termination 5 days after subscription is overdue for a charge
         UnsubscribeAndFailWorker.perform_in(terminate_by > (Time.current + 1.minute) ? terminate_by : 1.minute, id)
         purchase.mark_failed!
-      elsif purchase.in_progress? && purchase.charge_intent.is_a?(StripeChargeIntent) && (purchase.charge_intent&.processing? || purchase.charge_intent.requires_action?)
+      elsif purchase.in_progress? && purchase.charge_intent&.pending_confirmation?
         # For recurring charges on Indian cards, the charge goes into processing state for 26 hours.
         # We'll receive a webhook once the charge succeeds/fails, and we'll transition the purchase
         # to terminal (successful/failed) state when we receive that webhook.
         # Check back later to see if the purchase has been completed. If not, transition to a failed state.
-        FailAbandonedPurchaseWorker.perform_in(ChargeProcessor::TIME_TO_COMPLETE_SCA, purchase.id)
+        FailAbandonedPurchaseWorker.perform_in(purchase.time_to_complete_payment, purchase.id)
       else
         handle_purchase_success(purchase)
       end

@@ -205,6 +205,22 @@ describe StripeChargeIntent, :vcr do
     it "exposes the expiry as a time" do
       expect(stripe_charge_intent.pix_expires_at).to eq(Time.zone.at(1_700_000_000))
     end
+
+    it "is pending confirmation, so the purchase is not failed while the buyer pays" do
+      expect(stripe_charge_intent.pending_confirmation?).to eq(true)
+    end
+
+    it "gives the buyer until the code expires rather than the shorter SCA window" do
+      travel_to(Time.zone.at(1_700_000_000) - 2.hours) do
+        expect(stripe_charge_intent.time_to_complete).to eq(2.hours.to_i)
+      end
+    end
+
+    it "never gives the buyer less than the SCA window, even once the code has expired" do
+      travel_to(Time.zone.at(1_700_000_000) + 1.hour) do
+        expect(stripe_charge_intent.time_to_complete).to eq(ChargeProcessor::TIME_TO_COMPLETE_SCA.to_i)
+      end
+    end
   end
 
   context "when the payment intent does not display a Pix QR code" do
@@ -219,6 +235,10 @@ describe StripeChargeIntent, :vcr do
       expect(stripe_charge_intent.pix_qr_code).to be_nil
       expect(stripe_charge_intent.pix_qr_code_image_url).to be_nil
       expect(stripe_charge_intent.pix_expires_at).to be_nil
+    end
+
+    it "falls back to the SCA window" do
+      expect(stripe_charge_intent.time_to_complete).to eq(ChargeProcessor::TIME_TO_COMPLETE_SCA)
     end
   end
 end

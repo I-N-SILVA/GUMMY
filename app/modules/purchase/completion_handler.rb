@@ -6,6 +6,6 @@ module Purchase::CompletionHandler
   def ensure_completion
     yield
   ensure
-    mark_failed! if persisted? && in_progress? && (!charge_intent&.is_a?(StripeChargeIntent) || !(charge_intent&.processing? || charge_intent&.requires_action?))
+    mark_failed! if persisted? && in_progress? && !charge_intent&.pending_confirmation?
   end
 end

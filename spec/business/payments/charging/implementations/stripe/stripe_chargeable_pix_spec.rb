@@ -25,6 +25,10 @@ describe StripeChargeablePix do
     expect(chargeable.requires_mandate?).to be(false)
   end
 
+  it "cannot be charged with the buyer absent" do
+    expect(chargeable.can_be_charged_off_session?).to be(false)
+  end
+
   it "exposes the buyer zip code and no card details" do
     expect(chargeable.zip_code).to eq("22041-080")
     expect(chargeable.last4).to be_nil

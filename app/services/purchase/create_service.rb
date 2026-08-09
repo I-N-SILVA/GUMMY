@@ -160,9 +160,9 @@ class Purchase::CreateService < Purchase::BaseService
       return purchase, e.message
     end
 
-    if purchase.requires_sca?
+    if purchase.awaiting_payment_confirmation?
       # Check back later to see if the purchase has been completed. If not, transition to a failed state.
-      FailAbandonedPurchaseWorker.perform_in(ChargeProcessor::TIME_TO_COMPLETE_SCA, purchase.id)
+      FailAbandonedPurchaseWorker.perform_in(purchase.time_to_complete_payment, purchase.id)
     else
       handle_purchase_success unless purchase.is_part_of_combined_charge?
     end

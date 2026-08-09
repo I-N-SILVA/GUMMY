@@ -16,6 +16,20 @@ class ChargeIntent
     false
   end
 
+  # True when the charge exists but its outcome will only be known later: the buyer still has to act
+  # outside checkout — an SCA challenge, or paying a code in their banking app — or the processor is
+  # still settling. Such a purchase has to stay in_progress and be completed by the webhook, never by
+  # checkout, which would otherwise credit the seller and deliver the product for money that has not
+  # arrived yet.
+  def pending_confirmation?
+    false
+  end
+
+  # How long the buyer has to complete a pending charge before it is abandoned and cancelled.
+  def time_to_complete
+    ChargeProcessor::TIME_TO_COMPLETE_SCA
+  end
+
   def succeeded?
     true
   end

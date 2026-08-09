@@ -230,7 +230,9 @@ class Order::ChargeService
           Purchase::MarkSuccessfulService.new(purchase).perform
           handle_recommended_purchase(purchase)
         end
-      elsif charge_intent&.requires_action?
+      elsif charge_intent&.pending_confirmation?
+        # The intent id has to be recorded for any charge that completes later, not just an SCA one:
+        # FailAbandonedPurchaseWorker looks the intent up by it to cancel or confirm the purchase.
         purchases_to_charge.each do |purchase|
           if purchase.processor_payment_intent.present?
             purchase.processor_payment_intent.update!(intent_id: charge_intent.id)
@@ -269,9 +271,9 @@ class Order::ChargeService
         if purchase.free_purchase? || (purchase.is_test_purchase? && !purchase.is_preorder_authorization?)
           Purchase::MarkSuccessfulService.new(purchase).perform
           handle_recommended_purchase(purchase)
-        elsif charge_intent&.requires_action? || setup_intent&.requires_action?
+        elsif charge_intent&.pending_confirmation? || setup_intent&.requires_action?
           # Check back later to see if the purchase has been completed. If not, transition to a failed state.
-          FailAbandonedPurchaseWorker.perform_in(ChargeProcessor::TIME_TO_COMPLETE_SCA, purchase.id)
+          FailAbandonedPurchaseWorker.perform_in(charge_intent&.time_to_complete || ChargeProcessor::TIME_TO_COMPLETE_SCA, purchase.id)
         elsif charge_intent&.succeeded? && purchase_has_charge_data?(purchase)
           mark_charged_purchase_successful(purchase)
         else
@@ -299,6 +301,21 @@ class Order::ChargeService
           order: {
             id: order.secure_external_id(scope: "confirm", expires_at: 1.hour.from_now),
             stripe_connect_account_id: order.purchases.last.merchant_account.is_a_stripe_connect_account? ? order.purchases.last.merchant_account.charge_processor_merchant_id : nil
+          }
+        }
+      elsif charge_intent&.displays_pix_qr_code?
+        # Mirrors the SCA branches above: no error, but checkout is not finished — the buyer still has
+        # to pay the code in their banking app, and the webhook completes the purchase.
+        charge_responses[line_item_uid] ||= {
+          success: true,
+          requires_pix_payment: true,
+          pix: {
+            qr_code: charge_intent.pix_qr_code,
+            qr_code_image_url: charge_intent.pix_qr_code_image_url,
+            expires_at: charge_intent.pix_expires_at
+          },
+          order: {
+            id: order.secure_external_id(scope: "confirm", expires_at: 1.hour.from_now)
           }
         }
       else
