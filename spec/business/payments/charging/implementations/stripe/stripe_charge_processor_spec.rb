@@ -20,6 +20,22 @@ describe StripeChargeProcessor, :vcr do
       end
     end
 
+    context "with a local payment method" do
+      it "returns the chargeable the registered method declares" do
+        expect(subject.get_chargeable_for_params({ pix: true }, nil)).to be_a(StripeChargeablePix)
+      end
+
+      it "passes the zip code on when checkout collected one" do
+        chargeable = subject.get_chargeable_for_params({ pix: true, cc_zipcode: "01310-100", cc_zipcode_required: true }, nil)
+
+        expect(chargeable.zip_code).to eq("01310-100")
+      end
+
+      it "returns nil for a payment method that is not registered" do
+        expect(subject.get_chargeable_for_params({ not_a_method: true }, nil)).to be(nil)
+      end
+    end
+
     context "with Stripe token" do
       describe "with only token" do
         let(:token) { CardParamsSpecHelper.success.to_stripejs_token }

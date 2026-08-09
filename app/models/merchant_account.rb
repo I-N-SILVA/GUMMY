@@ -58,14 +58,13 @@ class MerchantAccount < ApplicationRecord
     is_a_stripe_connect_account? && country == Compliance::Countries::BRA.alpha2
   end
 
-  # Currency that charges to this account settle in. Brazilian Stripe Connect accounts settle in
-  # BRL (required for Pix); everything else settles in USD. Gated by the brl_settlement flag so
-  # behavior is unchanged until the flag is enabled for a seller.
+  # Currency that charges to this account settle in. Only local Connect accounts can settle in
+  # anything other than USD; which markets do, and the flag gating each rollout, is
+  # SettlementCurrencyPolicy's to decide, so opening a new market does not touch this model.
   def settlement_currency
-    return Currency::USD unless is_a_brazilian_stripe_connect_account?
-    return Currency::USD unless Feature.active?(:brl_settlement, user)
+    return Currency::USD unless is_a_stripe_connect_account?
 
-    Currency::BRL
+    SettlementCurrencyPolicy.currency_for(country, seller: user)
   end
 
   def is_a_paypal_connect_account?
