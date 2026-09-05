@@ -1179,23 +1179,38 @@ describe StripeChargeProcessor, :vcr do
     let(:stripe_charge) { create_stripe_charge(payment_method_id, amount: amount_cents, currency:) }
     let(:charge_id) { stripe_charge.id }
 
-    # Callers pass USD cents, but Stripe refunds in the charge's own currency, so a partial refund of
-    # a charge that settled elsewhere would move the wrong amount of money.
     describe "partial refund of a charge that did not settle in usd" do
       before do
         allow(Stripe::Charge).to receive(:retrieve).and_return(double(currency: Currency::BRL, destination: nil))
+        allow(subject).to receive(:get_refund).and_return(nil)
       end
 
-      it "raises instead of refunding a usd amount against a brl charge" do
+      it "converts the usd amount at the rate the charge settled at" do
+        allow(PurchaseSettlement).to receive(:conversion_rate_for_processor_charge).with("ch_brl").and_return(BigDecimal("5.5"))
+        expect(Stripe::Refund).to receive(:create).with(hash_including(amount: 27_50)).and_return(double(id: "re_brl"))
+
+        subject.refund!("ch_brl", amount_cents: 5_00)
+      end
+
+      it "uses the recorded rate rather than today's rate" do
+        $currency_namespace = Redis::Namespace.new(:currencies, redis: $redis)
+        $currency_namespace.set("BRL", 9.9)
+        allow(PurchaseSettlement).to receive(:conversion_rate_for_processor_charge).and_return(BigDecimal("5.5"))
+        expect(Stripe::Refund).to receive(:create).with(hash_including(amount: 27_50)).and_return(double(id: "re_brl"))
+
+        subject.refund!("ch_brl", amount_cents: 5_00)
+      end
+
+      it "raises rather than guessing when no settlement rate was recorded" do
+        allow(PurchaseSettlement).to receive(:conversion_rate_for_processor_charge).and_return(nil)
         expect(Stripe::Refund).not_to receive(:create)
 
         expect { subject.refund!("ch_brl", amount_cents: 5_00) }
-          .to raise_error(ChargeProcessorError, /settled in brl/)
+          .to raise_error(ChargeProcessorError, /no settlement rate recorded/)
       end
 
       it "allows a full refund, which stripe issues in the charge's own currency" do
         expect(Stripe::Refund).to receive(:create).with({ charge: "ch_brl" }).and_return(double(id: "re_brl"))
-        allow(subject).to receive(:get_refund).and_return(nil)
 
         subject.refund!("ch_brl")
       end

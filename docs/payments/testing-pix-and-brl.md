@@ -154,12 +154,16 @@ on, so prove it rather than assume it.
 ### Refunds
 
 - [ ] a **full** refund of the BRL charge succeeds and returns BRL
-- [ ] a **partial** refund of the BRL charge raises `ChargeProcessorError` rather than refunding the
-      wrong amount
+- [ ] a **partial** refund issues the converted amount, using the rate stored on the purchase's
+      `purchase_settlements` row rather than today's rate
+- [ ] a partial refund of a BRL charge with no settlement row raises `ChargeProcessorError` rather
+      than guessing a rate
 
-The second one is deliberate, not a bug. Partial refunds have to use the rate the charge settled at,
-which `refund!` cannot reach from a bare charge id. **This must be fixed before the flag is enabled
-for any real seller** — a Brazilian seller who cannot issue a partial refund is a support problem.
+Refunds go out at the rate the charge settled at, so a customer refunded a month later gets back what
+they paid rather than what the rate has drifted to. `refund!` only receives a charge id, so the rate
+comes from `PurchaseSettlement.conversion_rate_for_processor_charge`, which resolves the charge
+through the indexed `purchases.stripe_transaction_id` and falls back to
+`Charge#processor_transaction_id` for combined charges.
 
 ## Stage 4 — Pix, once a buyer can reach it
 
@@ -228,7 +232,7 @@ Be clear that passing everything above does **not** mean Pix is shippable:
 3. **Webhook path unverified.** `handle_stripe_event` is believed to route
    `payment_intent.processing` → `payment_intent.succeeded` into a `TYPE_CHARGE_SUCCEEDED` event, but
    nobody has watched a Pix payment actually do it. Stage 4 is where that gets proven.
-4. **Partial refunds raise** (Stage 3).
+4. **Partial refunds convert at the recorded rate** but that has never been exercised against Stripe (Stage 3).
 5. **Backtax transfers still assume USD** — see `docs/brazil/multi-currency-settlement.md`.
 
 ## What was actually verified when this was written

@@ -136,14 +136,15 @@ already on this branch; wiring it into checkout is independent of settlement cur
 
 ### Must be closed before `brl_settlement` is enabled for any seller
 
-**Partial refunds.** `StripeChargeProcessor#refund!` receives `amount_cents` in USD, but Stripe
-refunds in the charge's own currency, so a partial refund of a BRL charge would refund the wrong
-amount. Converting at today's rate is also wrong — the refund has to use the rate the charge settled
-at, which lives on the charge's `PurchaseSettlement` and is not reachable from the bare `charge_id`
-that `refund!` is given. `refund!` therefore now **raises** `ChargeProcessorError` on a partial refund
-of a non-USD charge rather than moving the wrong amount. Full refunds are unaffected: they send no
-amount and Stripe refunds the charge in full. Making partial refunds settlement-aware (threading the
-purchase, or its recorded rate, into `refund!`) is a prerequisite for enabling the flag.
+**Partial refunds — resolved.** `StripeChargeProcessor#refund!` receives `amount_cents` in USD, but
+Stripe refunds in the charge's own currency, so a partial refund of a BRL charge would have refunded
+the wrong amount. Converting at today's rate would also be wrong: a refund has to use the rate the
+charge settled at, or a customer refunded a month later gets back a different amount than they paid.
+`refund!` only receives a `charge_id`, so the rate is looked up with
+`PurchaseSettlement.conversion_rate_for_processor_charge`, which resolves the charge through the
+indexed `purchases.stripe_transaction_id` and falls back to `Charge#processor_transaction_id` for
+combined charges. A non-USD charge with no recorded rate raises rather than guessing. Full refunds
+are unaffected: they send no amount and Stripe refunds the charge in full.
 
 **Fees and transfers outside the charge path.** The `currency: "usd"` literals around
 `stripe_charge_processor.rb` lines 500–540 are the backtax-collection transfers, a separate flow from

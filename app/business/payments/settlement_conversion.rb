@@ -9,9 +9,9 @@ class SettlementConversion
     new(currency: merchant_account.settlement_currency)
   end
 
-  def initialize(currency:)
+  def initialize(currency:, conversion_rate: nil)
     @currency = currency.to_s
-    @conversion_rate = usd? ? nil : get_rate(@currency)
+    @conversion_rate = usd? ? nil : (conversion_rate || get_rate(@currency))
   end
 
   def usd?

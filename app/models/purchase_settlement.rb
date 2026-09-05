@@ -19,6 +19,15 @@ class PurchaseSettlement < ApplicationRecord
   # the settlement currency. Stored so the settled amount is reproducible from the original sale.
   validates :conversion_rate, numericality: { greater_than: 0 }, allow_nil: true
 
+  def self.conversion_rate_for_processor_charge(processor_charge_id)
+    return if processor_charge_id.blank?
+
+    purchase_ids = Purchase.where(stripe_transaction_id: processor_charge_id).pluck(:id)
+    purchase_ids = Charge.find_by(processor_transaction_id: processor_charge_id)&.purchase_ids || [] if purchase_ids.empty?
+
+    where(purchase_id: purchase_ids).where.not(conversion_rate: nil).pick(:conversion_rate)
+  end
+
   def self.record_for(purchase, settlement)
     return if settlement.nil? || settlement.usd?
 

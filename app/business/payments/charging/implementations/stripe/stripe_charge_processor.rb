@@ -403,19 +403,7 @@ class StripeChargeProcessor
     params = {
       charge: charge_id
     }
-    if amount_cents.present?
-      # Callers pass USD cents, but Stripe refunds in the charge's own currency, so a partial refund
-      # of a non-USD charge would refund the wrong amount. Converting at today's rate is not correct
-      # either: the refund must use the rate the charge settled at, which lives on the purchase's
-      # PurchaseSettlement and is not reachable from a bare charge id. Until partial refunds are made
-      # settlement-aware, fail loudly rather than move the wrong amount of money. Full refunds are
-      # unaffected — they send no amount and Stripe refunds the charge in full.
-      if stripe_charge.currency != Currency::USD
-        raise ChargeProcessorError, "Partial refund of #{charge_id} settled in #{stripe_charge.currency} is not supported"
-      end
-
-      params[:amount] = amount_cents
-    end
+    params[:amount] = refund_amount_in_charge_currency(stripe_charge, charge_id, amount_cents) if amount_cents.present?
     params[:reason] = REFUND_REASON_FRAUDULENT if is_for_fraud.present?
 
     # For Stripe-Connect:
@@ -1031,6 +1019,17 @@ class StripeChargeProcessor
   private
     # https://stripe.com/docs/api/files/object#file_object-purpose
     STRIPE_FILE_PURPOSE_DISPUTE_EVIDENCE = "dispute_evidence"
+
+    def refund_amount_in_charge_currency(stripe_charge, charge_id, amount_cents)
+      return amount_cents if stripe_charge.currency == Currency::USD
+
+      conversion_rate = PurchaseSettlement.conversion_rate_for_processor_charge(charge_id)
+      if conversion_rate.blank?
+        raise ChargeProcessorError, "Cannot refund #{charge_id}: no settlement rate recorded for a #{stripe_charge.currency} charge"
+      end
+
+      SettlementConversion.new(currency: stripe_charge.currency, conversion_rate:).convert(amount_cents)
+    end
 
     def create_dispute_evidence_stripe_file(blob)
       return unless blob.attached?

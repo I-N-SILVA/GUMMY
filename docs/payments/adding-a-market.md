@@ -81,6 +81,6 @@ asynchronous method makes it buildable but not yet checkout-complete.
 These are shared blockers, not per-market ones, and are listed in
 `docs/brazil/multi-currency-settlement.md`:
 
-- Partial refunds of a non-USD charge currently raise, because the refund has to use the rate the
-  charge settled at and `refund!` only receives a charge id.
+- Partial refunds of a non-USD charge convert at the rate recorded on the purchase's settlement row,
+  not the rate on the day of the refund.
 - The backtax-collection transfers in `StripeChargeProcessor` still assume USD.

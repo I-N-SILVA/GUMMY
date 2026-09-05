@@ -47,6 +47,22 @@ describe SettlementConversion do
     end
   end
 
+  describe "an explicit conversion rate" do
+    it "uses the rate given rather than the stored one" do
+      conversion = described_class.new(currency: Currency::BRL, conversion_rate: BigDecimal("4.0"))
+
+      expect(conversion.conversion_rate).to eq(BigDecimal("4.0"))
+      expect(conversion.convert(1_000)).to eq(4_000)
+    end
+
+    it "is ignored for usd, which never converts" do
+      conversion = described_class.new(currency: Currency::USD, conversion_rate: BigDecimal("4.0"))
+
+      expect(conversion.conversion_rate).to be_nil
+      expect(conversion.convert(1_000)).to eq(1_000)
+    end
+  end
+
   describe ".for" do
     it "settles a US Stripe account in USD" do
       merchant_account = create(:merchant_account_stripe_connect, country: "US")
