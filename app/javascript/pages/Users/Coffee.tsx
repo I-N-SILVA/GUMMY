@@ -12,14 +12,20 @@ type Props = {
   product: Product;
   purchase: Purchase | null;
   creator_profile: CreatorProfile;
+  local_payment_methods: string[];
 };
 
 export default function CoffeePage() {
-  const { product, purchase, creator_profile } = cast<Props>(usePage().props);
+  const { product, purchase, creator_profile, local_payment_methods } = cast<Props>(usePage().props);
 
   return (
     <ProfileLayout creatorProfile={creator_profile} hideFollowForm>
-      <CoffeeProduct product={product} purchase={purchase} className="mx-auto w-full max-w-6xl lg:px-0" />
+      <CoffeeProduct
+        product={product}
+        purchase={purchase}
+        localPaymentMethods={local_payment_methods}
+        className="mx-auto w-full max-w-6xl lg:px-0"
+      />
     </ProfileLayout>
   );
 }

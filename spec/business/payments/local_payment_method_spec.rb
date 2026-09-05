@@ -85,6 +85,27 @@ describe LocalPaymentMethod do
     end
   end
 
+  describe ".ids_available_to_seller" do
+    it "returns nothing for a seller with no stripe merchant account" do
+      expect(described_class.ids_available_to_seller(nil)).to eq([])
+    end
+
+    it "lists the method ids as strings for a brl-settling seller" do
+      user = create(:user)
+      create(:merchant_account_stripe_connect, user:, country: "BR")
+      Feature.activate_user(:brl_settlement, user)
+
+      expect(described_class.ids_available_to_seller(user)).to eq(["pix"])
+    end
+
+    it "lists nothing for a seller whose account still settles in usd" do
+      user = create(:user)
+      create(:merchant_account_stripe_connect, user:, country: "BR")
+
+      expect(described_class.ids_available_to_seller(user)).to eq([])
+    end
+  end
+
   describe "the registered catalog" do
     it "registers pix as an asynchronous brl method for brazil" do
       expect(pix.settlement_currency).to eq(Currency::BRL)

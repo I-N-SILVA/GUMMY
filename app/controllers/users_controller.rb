@@ -52,7 +52,8 @@ class UsersController < ApplicationController
 
     render inertia: "Users/Coffee", props: {
       **product_props,
-      creator_profile: profile_presenter.creator_profile
+      creator_profile: profile_presenter.creator_profile,
+      local_payment_methods: LocalPaymentMethod.ids_available_to_seller(@user)
     }
   end
 

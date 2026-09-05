@@ -26,6 +26,13 @@ class LocalPaymentMethod
     all.select { _1.available_for?(merchant_account) }
   end
 
+  def self.ids_available_to_seller(seller)
+    merchant_account = seller&.merchant_account(StripeChargeProcessor.charge_processor_id)
+    return [] if merchant_account.nil?
+
+    available_for(merchant_account).map { _1.id.to_s }
+  end
+
   def initialize(id:, chargeable:, countries:, settlement_currency:, asynchronous:, feature_flag:)
     @id = id
     @chargeable_class_name = chargeable

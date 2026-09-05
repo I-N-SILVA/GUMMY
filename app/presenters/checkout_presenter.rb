@@ -315,7 +315,7 @@ class CheckoutPresenter
         currency_code: product.price_currency_type.downcase,
         price_cents: product.price_cents,
         supports_paypal: supports_paypal(product),
-        local_payment_methods: local_payment_methods(product),
+        local_payment_methods: LocalPaymentMethod.ids_available_to_seller(product.user),
         custom_fields: product.custom_field_descriptors,
         exchange_rate: get_rate(product.price_currency_type).to_f / (is_currency_type_single_unit?(product.price_currency_type) ? 100 : 1),
         is_tiered_membership: product.is_tiered_membership,
@@ -342,13 +342,6 @@ class CheckoutPresenter
       elsif product.user.pay_with_paypal_enabled?
         "braintree"
       end
-    end
-
-    def local_payment_methods(product)
-      merchant_account = product.user.merchant_account(StripeChargeProcessor.charge_processor_id)
-      return [] if merchant_account.nil?
-
-      LocalPaymentMethod.available_for(merchant_account).map { |method| method.id.to_s }
     end
 
     def purchases

@@ -6,16 +6,21 @@ import { Product, Purchase } from "$app/components/Product";
 import { ConfigurationSelector, PriceSelection } from "$app/components/Product/ConfigurationSelector";
 import { CtaButton, getCtaName } from "$app/components/Product/CtaButton";
 import { Fieldset } from "$app/components/ui/Fieldset";
+import { Pill } from "$app/components/ui/Pill";
+
+const LOCAL_PAYMENT_METHOD_LABELS: Record<string, string> = { pix: "Pix" };
 
 export const CoffeeProduct = ({
   product,
   purchase,
   selection: selectionOverride,
+  localPaymentMethods = [],
   className,
 }: {
   product: Product;
   purchase: Purchase | null;
   selection?: Partial<PriceSelection> | null;
+  localPaymentMethods?: string[];
   className?: string;
 }) => {
   const [selectionState, setSelection] = React.useState<PriceSelection>({
@@ -31,6 +36,10 @@ export const CoffeeProduct = ({
     payInInstallments: false,
   });
   const selection = { ...selectionState, ...selectionOverride };
+
+  const acceptedLocalPaymentMethods = localPaymentMethods.flatMap(
+    (method) => LOCAL_PAYMENT_METHOD_LABELS[method] ?? [],
+  );
 
   const configurationSelector = (
     <>
@@ -74,6 +83,16 @@ export const CoffeeProduct = ({
         ) : (
           <section className="flex flex-col gap-4">{configurationSelector}</section>
         )}
+        {acceptedLocalPaymentMethods.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted">Also accepts</span>
+            {acceptedLocalPaymentMethods.map((label) => (
+              <Pill key={label} size="small">
+                {label}
+              </Pill>
+            ))}
+          </div>
+        ) : null}
       </section>
     </section>
   );
