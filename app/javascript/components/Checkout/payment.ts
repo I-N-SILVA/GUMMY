@@ -151,9 +151,6 @@ export function isProcessing(state: State) {
   return state.status.type !== "input";
 }
 
-// A local method is offerable only when every seller in the cart accepts it. One charge is created
-// per seller, but the buyer picks a single method for the whole checkout, so a method that only some
-// of them can settle would strand the rest.
 export function supportsLocalPaymentMethod(state: State, method: string) {
   return state.products.length > 0 && state.products.every((product) => product.localPaymentMethods.includes(method));
 }

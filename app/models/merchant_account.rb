@@ -58,9 +58,6 @@ class MerchantAccount < ApplicationRecord
     is_a_stripe_connect_account? && country == Compliance::Countries::BRA.alpha2
   end
 
-  # Currency that charges to this account settle in. Only local Connect accounts can settle in
-  # anything other than USD; which markets do, and the flag gating each rollout, is
-  # SettlementCurrencyPolicy's to decide, so opening a new market does not touch this model.
   def settlement_currency
     return Currency::USD unless is_a_stripe_connect_account?
 

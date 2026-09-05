@@ -231,8 +231,6 @@ class Order::ChargeService
           handle_recommended_purchase(purchase)
         end
       elsif charge_intent&.pending_confirmation?
-        # The intent id has to be recorded for any charge that completes later, not just an SCA one:
-        # FailAbandonedPurchaseWorker looks the intent up by it to cancel or confirm the purchase.
         purchases_to_charge.each do |purchase|
           if purchase.processor_payment_intent.present?
             purchase.processor_payment_intent.update!(intent_id: charge_intent.id)

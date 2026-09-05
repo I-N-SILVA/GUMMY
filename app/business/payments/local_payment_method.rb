@@ -1,13 +1,5 @@
 # frozen_string_literal: true
 
-# The catalog of local payment methods: bank-transfer and voucher methods tied to one market, as
-# opposed to cards, which work everywhere.
-#
-# Adding a method should be one entry in the catalog at the bottom of this file plus its chargeable
-# class, rather than another branch in the charge processor and another country test somewhere else.
-# A definition carries everything the rest of the platform needs: which chargeable builds the charge,
-# which countries offer it, which currency it settles in, whether it confirms asynchronously, and an
-# optional flag to gate its rollout independently of the market's.
 class LocalPaymentMethod
   REGISTRY = {}
   private_constant :REGISTRY
@@ -26,7 +18,6 @@ class LocalPaymentMethod
     REGISTRY[id.to_sym]
   end
 
-  # Checkout names the chosen method with a truthy param under its id, e.g. `pix: true`.
   def self.from_params(params)
     all.find { params[_1.id].present? }
   end
@@ -52,11 +43,6 @@ class LocalPaymentMethod
     @chargeable_class_name.constantize.new(**)
   end
 
-  # Offerable only when the account sits in one of the method's countries and already settles in the
-  # currency the method requires. The currency check is the one that matters: Stripe rejects a Pix
-  # intent that is not in BRL, so offering Pix on a USD-settling account would fail at the processor.
-  # Deriving it from the account's settlement currency means a market cannot be half-opened — the
-  # method appears only once its market's settlement flag is actually on for that seller.
   def available_for?(merchant_account)
     return false unless countries.include?(merchant_account.country)
     return false unless merchant_account.settlement_currency == settlement_currency

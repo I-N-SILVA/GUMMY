@@ -1926,9 +1926,6 @@ class Purchase < ApplicationRecord
     successful? ? "successful" : "failed"
   end
 
-  # Broader than requires_sca?: an asynchronous method such as Pix leaves the buyer to pay in their
-  # banking app, which is not SCA but must still keep the purchase in_progress until the webhook
-  # confirms it. Completing such a purchase in checkout would credit the seller before payment.
   def awaiting_payment_confirmation?
     charge_intent&.pending_confirmation? || setup_intent&.requires_action?
   end

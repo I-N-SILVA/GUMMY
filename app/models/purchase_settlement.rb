@@ -19,17 +19,6 @@ class PurchaseSettlement < ApplicationRecord
   # the settlement currency. Stored so the settled amount is reproducible from the original sale.
   validates :conversion_rate, numericality: { greater_than: 0 }, allow_nil: true
 
-  # Records what a purchase settled for, given the SettlementConversion its charge was created with.
-  #
-  # A no-op for USD settlement — absence of a row already means "settled in USD", so writing one
-  # would only add rows for every sale on the platform.
-  #
-  # Amounts come from the purchase's own USD totals converted at the charge's rate, not from the
-  # charge total, so a purchase that was one of several on a combined charge records its own share.
-  #
-  # An existing row is overwritten rather than kept: when a charge intent is re-created (an SCA
-  # retry, say) the earlier intent is abandoned, and the row should describe the intent that is
-  # actually live.
   def self.record_for(purchase, settlement)
     return if settlement.nil? || settlement.usd?
 

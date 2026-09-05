@@ -42,14 +42,10 @@ class StripeChargeIntent < ChargeIntent
     Time.zone.at(expires_at) if expires_at.present?
   end
 
-  # `requires_action?` deliberately means "needs SCA via stripe.js", so it excludes the Pix QR state.
-  # Both nonetheless leave the purchase waiting on the buyer, as does `processing?`.
   def pending_confirmation?
     processing? || requires_action? || displays_pix_qr_code?
   end
 
-  # A Pix code carries its own deadline from Stripe, typically far longer than the SCA window.
-  # Abandoning the purchase after the SCA window would cancel a charge the buyer can still pay.
   def time_to_complete
     return super unless displays_pix_qr_code? && pix_expires_at.present?
 

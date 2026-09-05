@@ -344,9 +344,6 @@ class CheckoutPresenter
       end
     end
 
-    # Ids of the market-specific methods this seller can be paid with, e.g. ["pix"]. The registry
-    # decides availability from the seller's merchant account, so a new market shows up in checkout
-    # without touching this presenter. Empty for every seller whose account still settles in USD.
     def local_payment_methods(product)
       merchant_account = product.user.merchant_account(StripeChargeProcessor.charge_processor_id)
       return [] if merchant_account.nil?

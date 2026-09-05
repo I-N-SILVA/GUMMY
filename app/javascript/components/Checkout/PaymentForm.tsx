@@ -781,7 +781,6 @@ const PixContent = () => {
 
   React.useEffect(() => {
     if (state.status.type !== "starting" || state.paymentMethod !== "pix") return;
-    // Nothing is tokenized in the browser for Pix, so the method is ready as soon as it is chosen.
     dispatch({ type: "set-payment-method", paymentMethod: { type: "pix" } });
   }, [state.status.type]);
 

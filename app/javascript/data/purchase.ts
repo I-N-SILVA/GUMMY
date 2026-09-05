@@ -23,8 +23,6 @@ export const getPixPaymentState = async (purchaseStatusId: string): Promise<PixP
   return cast<{ state: PixPaymentState }>(await response.json()).state;
 };
 
-// Saved cards, local methods such as Pix, and free purchases carry no card params to hand over:
-// there is nothing tokenized in the browser for them.
 export const cardParamsFor = (paymentMethod: PurchasePaymentMethod) =>
   "cardParamsResult" in paymentMethod ? paymentMethod.cardParamsResult.cardParams : null;
 
@@ -291,8 +289,6 @@ export const createPurchasesRequestData = (
   }
 
   if (payload.paymentMethod.type === "pix") {
-    // Nothing is collected in the browser for Pix. The backend builds the intent and Stripe returns
-    // a code for the buyer to pay in their banking app.
     data.pix = true;
     if (payload.zipCode) {
       data.cc_zipcode_required = true;

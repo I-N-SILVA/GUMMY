@@ -93,8 +93,6 @@ type ReusablePaymentRequestPaymentMethodResult = {
     | { type: "error"; cardParams: StripeErrorParams };
 };
 
-// A local method such as Pix carries no card params: there is nothing to tokenize up front. The
-// processor creates the intent, and the buyer authorizes it in their banking app afterwards.
 export type LocalPaymentMethodResult = { type: "pix" };
 
 export type AnyPaymentMethodResult =
