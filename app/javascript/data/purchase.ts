@@ -11,6 +11,18 @@ import { ProductToAdd } from "$app/components/Checkout/cartState";
 
 export type PurchasePaymentMethod = AnyPaymentMethodResult | { type: "not-applicable" };
 
+export type PixPaymentState = "in_progress" | "successful" | "failed";
+
+export const getPixPaymentState = async (purchaseStatusId: string): Promise<PixPaymentState> => {
+  const response = await request({
+    method: "GET",
+    url: Routes.payment_status_purchase_path(purchaseStatusId),
+    accept: "json",
+  });
+  if (!response.ok) throw new ResponseError();
+  return cast<{ state: PixPaymentState }>(await response.json()).state;
+};
+
 // Saved cards, local methods such as Pix, and free purchases carry no card params to hand over:
 // there is nothing tokenized in the browser for them.
 export const cardParamsFor = (paymentMethod: PurchasePaymentMethod) =>

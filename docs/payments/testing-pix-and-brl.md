@@ -1,16 +1,33 @@
 # Testing BRL settlement and Pix
 
-None of this could be executed in the environment the code was written in: no MySQL, no Mongo, no
-Redis, no Stripe credentials, and the pinned Ruby (3.4.3) could not be installed. What *was* verified
-is stated at the bottom. Everything below is the work of actually proving it.
-
 Do these in order. Each stage assumes the previous one passed.
 
----
+## What has actually been run
+
+Ruby 3.4.3, MySQL and Redis do work in the sandbox — `.claude/hooks/session-start.sh` now sets all
+three up, so a fresh remote session can run RSpec. **Elasticsearch and MongoDB cannot be installed
+there**: `artifacts.elastic.co`, `fastdl.mongodb.org`, `repo.mongodb.org` and `docker.io` are all
+blocked by the network policy, and neither ships in Ubuntu's apt repositories.
+
+That splits the suite in two, and the split is worth understanding before trusting any run:
+
+- Examples that exercise pure logic **run and pass**.
+- Any example calling `create(:user)` **fails with `Mongo::Error::NoServerAvailable`**, because user
+  validation calls `BlockedObject.find_object`, which is Mongo-backed
+  (`app/models/concerns/attribute_blockable.rb:319`). Each one costs 30 seconds of driver timeout
+  before failing, so a run looks hung long before it looks broken.
+
+Results from the settlement and registry specs in the sandbox: **36 examples, 22 passing, 14
+failing** — every one of the 14 on that Mongo lookup, none on an assertion. The passing 22 include
+the conversion arithmetic that matters most (a rate of 5.5 turning 1000 USD cents into 5500 BRL
+cents, and a conversion holding its captured rate after the stored rate moves).
+
+**Nothing below Stage 2 has been verified anywhere.** Treat the Stripe-facing code as reviewed, not
+tested.
 
 ## Stage 0 — Get a working environment
 
-The specs need MySQL, Redis, Elasticsearch and Mongo. `README.md` has the full setup; the short path:
+Locally, `README.md` has the full setup; the short path:
 
 ```bash
 rbenv install 3.4.3 && bundle install
@@ -28,8 +45,23 @@ bundle exec rspec spec/models/purchase_settlement_spec.rb
 
 If that errors on connection rather than on assertions, fix the environment first — a spec that
 cannot connect looks a lot like a spec that passes when you run the whole file and skim the output.
+In particular, a 30-second pause per example means Mongo is missing, not that the code is slow.
 
 ## Stage 1 — Run the specs written alongside this work
+
+To reproduce the green subset without Mongo (this is the exact command that returns
+`22 examples, 0 failures`):
+
+```bash
+bundle exec rspec \
+  spec/business/payments/settlement_conversion_spec.rb \
+  spec/business/payments/settlement_currency_policy_spec.rb \
+  spec/business/payments/local_payment_method_spec.rb \
+  -e "USD settlement" -e "non-USD settlement" -e ".from_params" \
+  -e "#build_chargeable" -e "the registered catalog" -e ".market?" -e "MARKETS" -e ".[]"
+```
+
+With Mongo available, drop the `-e` filters and all 36 should pass.
 
 These need a database but no Stripe credentials, so they should pass immediately:
 

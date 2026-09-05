@@ -1,16 +1,22 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
+import { getPixPaymentState, PixPaymentState } from "$app/data/purchase";
+import { assertResponseError } from "$app/utils/request";
+
 import { Button } from "$app/components/Button";
 import { CopyToClipboard } from "$app/components/CopyToClipboard";
 import { LoadingSpinner } from "$app/components/LoadingSpinner";
 import { Alert } from "$app/components/ui/Alert";
 
+const POLL_INTERVAL_MS = 3000;
+
 export type PixPaymentProps = {
   qrCode: string;
   qrCodeImageUrl: string;
   expiresAt: Date | null;
-  status: "awaiting" | "confirmed";
+  purchaseStatusId: string;
+  onConfirmed?: () => void;
 };
 
 const formatCountdown = (secondsRemaining: number) => {
@@ -37,15 +43,54 @@ const useSecondsRemaining = (expiresAt: Date | null) => {
   return secondsRemaining;
 };
 
-export const PixPayment = ({ qrCode, qrCodeImageUrl, expiresAt, status }: PixPaymentProps) => {
+const usePixPaymentState = (purchaseStatusId: string, polling: boolean) => {
+  const [state, setState] = React.useState<PixPaymentState>("in_progress");
+
+  React.useEffect(() => {
+    if (!polling) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const nextState = await getPixPaymentState(purchaseStatusId);
+        if (!cancelled) setState(nextState);
+      } catch (error) {
+        assertResponseError(error);
+      }
+    };
+
+    void poll();
+    const interval = setInterval(() => void poll(), POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [purchaseStatusId, polling]);
+
+  return state;
+};
+
+export const PixPayment = ({ qrCode, qrCodeImageUrl, expiresAt, purchaseStatusId, onConfirmed }: PixPaymentProps) => {
   const { t } = useTranslation();
   const secondsRemaining = useSecondsRemaining(expiresAt);
   const expired = secondsRemaining === 0;
+  const state = usePixPaymentState(purchaseStatusId, !expired);
 
-  if (status === "confirmed")
+  React.useEffect(() => {
+    if (state === "successful") onConfirmed?.();
+  }, [state]);
+
+  if (state === "successful")
     return (
       <Alert variant="success" role="status">
         {t("checkout.paymentConfirmed")}
+      </Alert>
+    );
+
+  if (state === "failed")
+    return (
+      <Alert variant="danger" role="status">
+        {t("checkout.pixFailed")}
       </Alert>
     );
 

@@ -970,6 +970,56 @@ describe PurchasesController, :vcr do
       end
     end
 
+    describe "GET payment_status" do
+      let(:purchase) { create(:purchase_in_progress) }
+      let(:token) { purchase.secure_external_id(scope: Purchase::PAYMENT_STATUS_ID_SCOPE, expires_at: 1.hour.from_now) }
+
+      it "returns in_progress while the buyer has not paid" do
+        get :payment_status, params: { id: token }
+
+        expect(response).to be_successful
+        expect(response.parsed_body["state"]).to eq("in_progress")
+      end
+
+      it "returns successful once the purchase completes" do
+        purchase.update!(purchase_state: "successful")
+
+        get :payment_status, params: { id: token }
+
+        expect(response.parsed_body["state"]).to eq("successful")
+      end
+
+      it "returns failed once the purchase fails" do
+        purchase.update!(purchase_state: "failed")
+
+        get :payment_status, params: { id: token }
+
+        expect(response.parsed_body["state"]).to eq("failed")
+      end
+
+      it "returns 404 for a plain external id" do
+        expect do
+          get :payment_status, params: { id: purchase.external_id }
+        end.to raise_error(ActionController::RoutingError)
+      end
+
+      it "returns 404 for an expired token" do
+        expired_token = purchase.secure_external_id(scope: Purchase::PAYMENT_STATUS_ID_SCOPE, expires_at: 1.minute.ago)
+
+        expect do
+          get :payment_status, params: { id: expired_token }
+        end.to raise_error(ActionController::RoutingError)
+      end
+
+      it "returns 404 for a token scoped to a different action" do
+        other_scope_token = purchase.secure_external_id(scope: "confirm", expires_at: 1.hour.from_now)
+
+        expect do
+          get :payment_status, params: { id: other_scope_token }
+        end.to raise_error(ActionController::RoutingError)
+      end
+    end
+
     describe "POST confirm" do
       let(:chargeable) { build(:chargeable, card: StripePaymentMethodHelper.success_sca_not_required) }
       let(:purchase) { create(:purchase_in_progress, chargeable:, was_product_recommended: true, recommended_by: "discover") }

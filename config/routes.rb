@@ -155,6 +155,7 @@ Rails.application.routes.draw do
     resources :purchases, only: [] do
       member do
         post :confirm
+        get :payment_status
       end
     end
 

@@ -304,15 +304,17 @@ class Order::ChargeService
           }
         }
       elsif charge_intent&.displays_pix_qr_code?
-        # Mirrors the SCA branches above: no error, but checkout is not finished — the buyer still has
-        # to pay the code in their banking app, and the webhook completes the purchase.
         charge_responses[line_item_uid] ||= {
           success: true,
           requires_pix_payment: true,
           pix: {
             qr_code: charge_intent.pix_qr_code,
             qr_code_image_url: charge_intent.pix_qr_code_image_url,
-            expires_at: charge_intent.pix_expires_at
+            expires_at: charge_intent.pix_expires_at,
+            purchase_status_id: purchase.secure_external_id(
+              scope: Purchase::PAYMENT_STATUS_ID_SCOPE,
+              expires_at: charge_intent.pix_expires_at || ChargeProcessor::TIME_TO_COMPLETE_SCA.from_now
+            )
           },
           order: {
             id: order.secure_external_id(scope: "confirm", expires_at: 1.hour.from_now)

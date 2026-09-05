@@ -20,6 +20,8 @@ class Purchase < ApplicationRecord
   # If a sku-enabled product has no skus (i.e. the product has no variants), then the sku id of the purchase will be "pid_#{external_product_id}".
   SKU_ID_PREFIX_FOR_PRODUCT_WITH_NO_SKUS = "pid_"
 
+  PAYMENT_STATUS_ID_SCOPE = "payment_status"
+
   # Gumroad's fees per transaction
   GUMROAD_DISCOVER_EXTRA_FEE_PER_THOUSAND = 100
 
@@ -1916,6 +1918,12 @@ class Purchase < ApplicationRecord
 
   def requires_sca?
     setup_intent&.requires_action? || charge_intent&.requires_action?
+  end
+
+  def payment_status
+    return "in_progress" if in_progress?
+
+    successful? ? "successful" : "failed"
   end
 
   # Broader than requires_sca?: an asynchronous method such as Pix leaves the buyer to pay in their

@@ -18,7 +18,7 @@ class PurchasesController < ApplicationController
   PARAMS_TO_REMOVE_IF_BLANK = [:full_name, :email]
 
   PUBLIC_ACTIONS = %i[
-    confirm subscribe unsubscribe receipt resend_receipt
+    confirm payment_status subscribe unsubscribe receipt resend_receipt
     update_subscription charge_preorder confirm_receipt_email
   ].freeze
   before_action :authenticate_user!, except: PUBLIC_ACTIONS
@@ -50,6 +50,14 @@ class PurchasesController < ApplicationController
 
       render_create_success(@purchase)
     end
+  end
+
+  def payment_status
+    ActiveRecord::Base.connection.stick_to_primary!
+    purchase = Purchase.find_by_secure_external_id(params[:id], scope: Purchase::PAYMENT_STATUS_ID_SCOPE)
+    return e404_json unless purchase
+
+    render json: { state: purchase.payment_status }
   end
 
   def unsubscribe
