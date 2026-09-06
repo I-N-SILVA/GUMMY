@@ -37,6 +37,7 @@ import { PROFILE_SORT_KEYS } from "$app/parsers/product";
 import { assertDefined } from "$app/utils/assert";
 import { classNames } from "$app/utils/classNames";
 import { ALLOWED_EXTENSIONS } from "$app/utils/file";
+import GuidGenerator from "$app/utils/guid_generator";
 import { assertResponseError, request, ResponseError } from "$app/utils/request";
 
 import { Button } from "$app/components/Button";
@@ -61,14 +62,7 @@ import { Switch } from "$app/components/ui/Switch";
 import { useOnChange } from "$app/components/useOnChange";
 import { useRefToLatest } from "$app/components/useRefToLatest";
 
-import {
-  LinksSectionView as LinksView,
-  PageProps as BasePageProps,
-  FeaturedProductView,
-  Post,
-  PostsView,
-  SubscribeView,
-} from "./Sections";
+import { PageProps as BasePageProps, FeaturedProductView, Post, PostsView, SubscribeView } from "./Sections";
 
 type ProductsSection = SavedProductsSection & { search_results: SearchResults };
 type EditProduct = { id: string; name: string };
@@ -640,81 +634,109 @@ const FeaturedProductSectionView = ({ section }: { section: FeaturedProductSecti
   );
 };
 
+const LINK_SAVE_DEBOUNCE_MS = 1000;
+
 const LinksSectionView = ({ section }: { section: LinksSection }) => {
   const [, dispatch] = useReducer();
-  const updateSection = (updated: Partial<LinksSection>) =>
-    dispatch({ type: "update-section", updated: { ...section, ...updated } });
+  const saveSection = useSaveSection(section);
+  const saveRef = useRefToLatest(saveSection);
+  const sectionRef = useRefToLatest(section);
+  const debouncedSave = React.useMemo(
+    () => debounce((updated: LinksSection) => void saveRef.current(updated), LINK_SAVE_DEBOUNCE_MS),
+    [],
+  );
+
+  const applyLinks = (links: ProfileLink[], immediate = false) => {
+    const sanitized = links.map((link): ProfileLink => {
+      const sanitizedLink: ProfileLink = { id: link.id, title: link.title, url: link.url };
+      return link.subtitle === undefined ? sanitizedLink : { ...sanitizedLink, subtitle: link.subtitle };
+    });
+    const updated = { ...sectionRef.current, links: sanitized };
+    dispatch({ type: "update-section", updated });
+
+    // A link the seller is still filling in fails server validation, so hold the save
+    // rather than interrupting them with an error they already know about.
+    const isComplete = sanitized.every((link) => link.title.trim() !== "" && link.url.trim() !== "");
+    if (!isComplete) return debouncedSave.cancel();
+
+    if (immediate) {
+      debouncedSave.cancel();
+      void saveRef.current(updated);
+    } else {
+      debouncedSave(updated);
+    }
+  };
 
   const updateLink = (id: string, updated: Partial<ProfileLink>) =>
-    updateSection({ links: section.links.map((link) => (link.id === id ? { ...link, ...updated } : link)) });
+    applyLinks(section.links.map((link) => (link.id === id ? { ...link, ...updated } : link)));
 
-  const addLink = () => updateSection({ links: [...section.links, { id: crypto.randomUUID(), title: "", url: "" }] });
+  const addLink = () => applyLinks([...section.links, { id: GuidGenerator.generate(), title: "", url: "" }]);
 
-  const removeLink = (id: string) => updateSection({ links: section.links.filter((link) => link.id !== id) });
+  const removeLink = (id: string) =>
+    applyLinks(
+      section.links.filter((link) => link.id !== id),
+      true,
+    );
 
   return (
-    <SectionLayout
-      section={section}
-      menuItems={[
-        <EditorSubmenu key="0" heading="Links" text={`${section.links.length} links`}>
-          <div className="grid gap-4">
-            <Sortable
-              list={section.links}
-              setList={(links) => {
-                if (!isEqual(links, section.links)) updateSection({ links });
-              }}
-              handle="[aria-grabbed]"
-              tag="div"
-              className="grid gap-4"
-            >
-              {section.links.map((link) => (
-                <div key={link.id} className="grid gap-2 rounded border border-border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div aria-grabbed="false" aria-label="Reorder link" className="cursor-grab">
-                      <DotsHorizontalRounded className="size-5" />
-                    </div>
-                    <Button outline color="danger" aria-label="Remove link" onClick={() => removeLink(link.id)}>
-                      <Trash className="size-4" />
-                    </Button>
-                  </div>
-                  <Input
-                    type="text"
-                    aria-label="Link title"
-                    placeholder="Title"
-                    value={link.title}
-                    onChange={(evt) => updateLink(link.id, { title: evt.target.value })}
-                  />
-                  <Input
-                    type="text"
-                    aria-label="Link description"
-                    placeholder="Description (optional)"
-                    value={link.subtitle ?? ""}
-                    onChange={(evt) => updateLink(link.id, { subtitle: evt.target.value })}
-                  />
-                  <Input
-                    type="url"
-                    aria-label="Link URL"
-                    placeholder="https://example.com"
-                    value={link.url}
-                    onChange={(evt) => updateLink(link.id, { url: evt.target.value })}
-                  />
-                </div>
-              ))}
-            </Sortable>
-            <Button onClick={addLink}>Add link</Button>
-          </div>
-        </EditorSubmenu>,
-      ]}
-    >
-      {section.links.length > 0 ? (
-        <LinksView section={section} />
-      ) : (
+    <SectionLayout section={section}>
+      {section.links.length === 0 ? (
         <Placeholder>
           <p>Add links to send people to your other pages, socials, and anything else you want to share.</p>
           <Button color="primary" onClick={addLink}>
             Add link
           </Button>
         </Placeholder>
+      ) : (
+        <div className="grid gap-4">
+          <Sortable
+            list={section.links}
+            setList={(links) => {
+              const reordered = links.map(({ id }) => id).join();
+              if (reordered !== section.links.map(({ id }) => id).join()) applyLinks(links, true);
+            }}
+            handle="[aria-label='Reorder link']"
+            tag="div"
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {section.links.map((link) => (
+              <div key={link.id} className="grid gap-2 rounded border border-border p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span aria-label="Reorder link" className="cursor-grab" role="button" tabIndex={0}>
+                    <DotsHorizontalRounded className="size-5" />
+                  </span>
+                  <Button outline color="danger" aria-label="Remove link" onClick={() => removeLink(link.id)}>
+                    <Trash className="size-4" />
+                  </Button>
+                </div>
+                <Input
+                  type="text"
+                  aria-label="Link title"
+                  placeholder="Title"
+                  value={link.title}
+                  onChange={(evt) => updateLink(link.id, { title: evt.target.value })}
+                />
+                <Input
+                  type="text"
+                  aria-label="Link description"
+                  placeholder="Description (optional)"
+                  value={link.subtitle ?? ""}
+                  onChange={(evt) => updateLink(link.id, { subtitle: evt.target.value })}
+                />
+                <Input
+                  type="url"
+                  aria-label="Link URL"
+                  placeholder="https://example.com"
+                  value={link.url}
+                  onChange={(evt) => updateLink(link.id, { url: evt.target.value })}
+                />
+              </div>
+            ))}
+          </Sortable>
+          <div>
+            <Button onClick={addLink}>Add link</Button>
+          </div>
+        </div>
       )}
     </SectionLayout>
   );
