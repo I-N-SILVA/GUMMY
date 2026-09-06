@@ -636,6 +636,8 @@ const FeaturedProductSectionView = ({ section }: { section: FeaturedProductSecti
 
 const LINK_SAVE_DEBOUNCE_MS = 1000;
 
+const formatClicks = (clicks: number) => (clicks === 1 ? "1 click" : `${clicks.toLocaleString()} clicks`);
+
 const LinksSectionView = ({ section }: { section: LinksSection }) => {
   const [, dispatch] = useReducer();
   const saveSection = useSaveSection(section);
@@ -705,9 +707,14 @@ const LinksSectionView = ({ section }: { section: LinksSection }) => {
                   <span aria-label="Reorder link" className="cursor-grab" role="button" tabIndex={0}>
                     <DotsHorizontalRounded className="size-5" />
                   </span>
-                  <Button outline color="danger" aria-label="Remove link" onClick={() => removeLink(link.id)}>
-                    <Trash className="size-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted" aria-label={`Clicks for ${link.title || "this link"}`}>
+                      {formatClicks(section.link_clicks?.[link.id] ?? 0)}
+                    </span>
+                    <Button outline color="danger" aria-label="Remove link" onClick={() => removeLink(link.id)}>
+                      <Trash className="size-4" />
+                    </Button>
+                  </div>
                 </div>
                 <Input
                   type="text"

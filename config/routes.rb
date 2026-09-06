@@ -883,6 +883,9 @@ Rails.application.routes.draw do
     post "/posts/:id/increment_post_views", to: "posts#increment_post_views", as: :increment_post_views
     post "/posts/:id/send_for_purchase/:purchase_id", to: "posts#send_for_purchase", as: :send_for_purchase
 
+    # profile link clicks
+    post "/profile_sections/:id/link_clicks", to: "profile_link_clicks#create", as: :profile_section_link_clicks
+
     # communities
     resources :communities, only: %i[index] do
       scope module: "communities" do
@@ -1137,6 +1140,7 @@ Rails.application.routes.draw do
       post "add_purchase_to_library", to: "users#add_purchase_to_library"
     end
     post "/posts/:id/increment_post_views", to: "posts#increment_post_views"
+    post "/profile_sections/:id/link_clicks", to: "profile_link_clicks#create"
     get "/p/:slug", to: "posts#show", as: :custom_domain_view_post
     get "/:username/posts_paginated", to: "users/posts#paginated"
     get "/posts", to: redirect("/")

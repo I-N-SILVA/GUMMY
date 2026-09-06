@@ -51,6 +51,7 @@ export type ProfileLink = {
 export type LinksSection = Section & {
   type: "SellerProfileLinksSection";
   links: ProfileLink[];
+  link_clicks?: Record<string, number>;
 };
 
 export type WishlistsSection = Section & {

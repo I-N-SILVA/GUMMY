@@ -83,6 +83,8 @@ class ProfileSectionsPresenter
         )
       end
 
+      cached_props[:link_clicks] = ProfileLinkClick.totals_by_link_id(section) if is_owner && cached_props[:type] == "SellerProfileLinksSection"
+
       case cached_props[:type]
       when "SellerProfileProductsSection"
         if is_owner

@@ -3,6 +3,7 @@ import { EditorContent } from "@tiptap/react";
 import classNames from "classnames";
 import * as React from "react";
 
+import { recordProfileLinkClick } from "$app/data/profile_link_clicks";
 import {
   FeaturedProductSection as SavedFeaturedProductSection,
   LinksSection as SavedLinksSection,
@@ -61,7 +62,13 @@ export type Section =
   | WishlistsSection
   | LinksSection;
 
-export const LinksSectionView = ({ section }: { section: LinksSection }) => (
+export const LinksSectionView = ({
+  section,
+  trackClicks = false,
+}: {
+  section: LinksSection;
+  trackClicks?: boolean;
+}) => (
   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {section.links.map((link) => (
       <a
@@ -69,6 +76,9 @@ export const LinksSectionView = ({ section }: { section: LinksSection }) => (
         href={link.url}
         target="_blank"
         rel="noopener noreferrer nofollow"
+        onClick={() => {
+          if (trackClicks) void recordProfileLinkClick({ sectionId: section.id, linkId: link.id }).catch(() => {});
+        }}
         className="group flex items-start justify-between gap-3 rounded border border-border p-4 no-underline transition-transform hover:-translate-y-0.5"
       >
         <span className="grid gap-1">
@@ -254,7 +264,7 @@ export const Section = ({ section, creator_profile, currency_code }: { section: 
     ) : section.type === "SellerProfileFeaturedProductSection" ? (
       <FeaturedProductSectionView key={section.id} section={section} />
     ) : section.type === "SellerProfileLinksSection" ? (
-      <LinksSectionView key={section.id} section={section} />
+      <LinksSectionView key={section.id} section={section} trackClicks />
     ) : (
       <WishlistsSectionView key={section.id} section={section} />
     )}
