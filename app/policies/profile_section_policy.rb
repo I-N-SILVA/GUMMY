@@ -15,6 +15,6 @@ class ProfileSectionPolicy < ApplicationPolicy
   end
 
   def permitted_attributes_for_update
-    [:header, :default_product_sort, :add_new_products, :hide_header, :show_filters, :button_label, :featured_product_id, { shown_products: [], shown_posts: [], text: {}, shown_wishlists: [] }]
+    [:header, :default_product_sort, :add_new_products, :hide_header, :show_filters, :button_label, :featured_product_id, { shown_products: [], shown_posts: [], text: {}, shown_wishlists: [], links: [:id, :title, :subtitle, :url] }]
   end
 end

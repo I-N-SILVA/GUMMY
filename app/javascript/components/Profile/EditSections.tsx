@@ -24,7 +24,9 @@ import {
   Section as BaseSection,
   FeaturedProductSection,
   getProduct,
+  LinksSection,
   PostsSection,
+  ProfileLink,
   RichTextSection,
   ProductsSection as SavedProductsSection,
   SubscribeSection,
@@ -37,6 +39,7 @@ import { classNames } from "$app/utils/classNames";
 import { ALLOWED_EXTENSIONS } from "$app/utils/file";
 import { assertResponseError, request, ResponseError } from "$app/utils/request";
 
+import { Button } from "$app/components/Button";
 import { Popover, PopoverContent, PopoverTrigger } from "$app/components/Popover";
 import { Props as ProductProps } from "$app/components/Product";
 import { CardGrid, SORT_BY_LABELS, useSearchReducer } from "$app/components/Product/CardGrid";
@@ -52,12 +55,20 @@ import { Fieldset, FieldsetTitle } from "$app/components/ui/Fieldset";
 import { Input } from "$app/components/ui/Input";
 import { Label } from "$app/components/ui/Label";
 import { Menu, MenuItem } from "$app/components/ui/Menu";
+import { Placeholder } from "$app/components/ui/Placeholder";
 import { Row, RowActions, RowContent, RowDragHandle, Rows } from "$app/components/ui/Rows";
 import { Switch } from "$app/components/ui/Switch";
 import { useOnChange } from "$app/components/useOnChange";
 import { useRefToLatest } from "$app/components/useRefToLatest";
 
-import { PageProps as BasePageProps, FeaturedProductView, Post, PostsView, SubscribeView } from "./Sections";
+import {
+  LinksSectionView as LinksView,
+  PageProps as BasePageProps,
+  FeaturedProductView,
+  Post,
+  PostsView,
+  SubscribeView,
+} from "./Sections";
 
 type ProductsSection = SavedProductsSection & { search_results: SearchResults };
 type EditProduct = { id: string; name: string };
@@ -67,7 +78,8 @@ export type Section =
   | RichTextSection
   | SubscribeSection
   | FeaturedProductSection
-  | WishlistsSection;
+  | WishlistsSection
+  | LinksSection;
 
 export type PageProps = Omit<BasePageProps, "sections"> & {
   sections: Section[];
@@ -628,6 +640,86 @@ const FeaturedProductSectionView = ({ section }: { section: FeaturedProductSecti
   );
 };
 
+const LinksSectionView = ({ section }: { section: LinksSection }) => {
+  const [, dispatch] = useReducer();
+  const updateSection = (updated: Partial<LinksSection>) =>
+    dispatch({ type: "update-section", updated: { ...section, ...updated } });
+
+  const updateLink = (id: string, updated: Partial<ProfileLink>) =>
+    updateSection({ links: section.links.map((link) => (link.id === id ? { ...link, ...updated } : link)) });
+
+  const addLink = () => updateSection({ links: [...section.links, { id: crypto.randomUUID(), title: "", url: "" }] });
+
+  const removeLink = (id: string) => updateSection({ links: section.links.filter((link) => link.id !== id) });
+
+  return (
+    <SectionLayout
+      section={section}
+      menuItems={[
+        <EditorSubmenu key="0" heading="Links" text={`${section.links.length} links`}>
+          <div className="grid gap-4">
+            <Sortable
+              list={section.links}
+              setList={(links) => {
+                if (!isEqual(links, section.links)) updateSection({ links });
+              }}
+              handle="[aria-grabbed]"
+              tag="div"
+              className="grid gap-4"
+            >
+              {section.links.map((link) => (
+                <div key={link.id} className="grid gap-2 rounded border border-border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div aria-grabbed="false" aria-label="Reorder link" className="cursor-grab">
+                      <DotsHorizontalRounded className="size-5" />
+                    </div>
+                    <Button outline color="danger" aria-label="Remove link" onClick={() => removeLink(link.id)}>
+                      <Trash className="size-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    type="text"
+                    aria-label="Link title"
+                    placeholder="Title"
+                    value={link.title}
+                    onChange={(evt) => updateLink(link.id, { title: evt.target.value })}
+                  />
+                  <Input
+                    type="text"
+                    aria-label="Link description"
+                    placeholder="Description (optional)"
+                    value={link.subtitle ?? ""}
+                    onChange={(evt) => updateLink(link.id, { subtitle: evt.target.value })}
+                  />
+                  <Input
+                    type="url"
+                    aria-label="Link URL"
+                    placeholder="https://example.com"
+                    value={link.url}
+                    onChange={(evt) => updateLink(link.id, { url: evt.target.value })}
+                  />
+                </div>
+              ))}
+            </Sortable>
+            <Button onClick={addLink}>Add link</Button>
+          </div>
+        </EditorSubmenu>,
+      ]}
+    >
+      {section.links.length > 0 ? (
+        <LinksView section={section} />
+      ) : (
+        <Placeholder>
+          <p>Add links to send people to your other pages, socials, and anything else you want to share.</p>
+          <Button color="primary" onClick={addLink}>
+            Add link
+          </Button>
+        </Placeholder>
+      )}
+    </SectionLayout>
+  );
+};
+
 export const AddSectionButton = ({ side, index }: { index: number; side?: "top" | "bottom" }) => {
   const [open, setOpen] = React.useState(false);
   const [state, dispatch] = useReducer();
@@ -663,6 +755,8 @@ export const AddSectionButton = ({ side, index }: { index: number; side?: "top" 
               return { ...commonProps, type };
             case "SellerProfileWishlistsSection":
               return { ...commonProps, type, shown_wishlists: [] };
+            case "SellerProfileLinksSection":
+              return { ...commonProps, type, links: [] };
           }
         })();
         const response = await request({
@@ -727,6 +821,10 @@ export const AddSectionButton = ({ side, index }: { index: number; side?: "top" 
             <FileDetail pack="filled" className="size-5" />
             Wishlists
           </MenuItem>
+          <MenuItem onClick={() => addSection("SellerProfileLinksSection")}>
+            <Link pack="filled" className="size-5" />
+            Links
+          </MenuItem>
         </Menu>
       </PopoverContent>
     </Popover>
@@ -747,5 +845,7 @@ export const EditSection = ({ section }: { section: Section }) => {
       return <FeaturedProductSectionView section={section} />;
     case "SellerProfileWishlistsSection":
       return <WishlistsSectionView section={section} />;
+    case "SellerProfileLinksSection":
+      return <LinksSectionView section={section} />;
   }
 };

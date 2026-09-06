@@ -41,6 +41,18 @@ export type FeaturedProductSection = Section & {
   featured_product_id?: string;
 };
 
+export type ProfileLink = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  url: string;
+};
+
+export type LinksSection = Section & {
+  type: "SellerProfileLinksSection";
+  links: ProfileLink[];
+};
+
 export type WishlistsSection = Section & {
   type: "SellerProfileWishlistsSection";
   shown_wishlists: string[];

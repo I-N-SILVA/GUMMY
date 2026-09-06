@@ -5,6 +5,7 @@ import * as React from "react";
 
 import {
   FeaturedProductSection as SavedFeaturedProductSection,
+  LinksSection as SavedLinksSection,
   PostsSection as SavedPostsSection,
   ProductsSection as SavedProductsSection,
   RichTextSection as SavedRichTextSection,
@@ -49,13 +50,36 @@ type FeaturedProductSection = BaseSection & Pick<SavedFeaturedProductSection, "t
 
 type WishlistsSection = BaseSection & Pick<SavedWishlistsSection, "type"> & { wishlists: CardWishlist[] };
 
+type LinksSection = BaseSection & Pick<SavedLinksSection, "type" | "links">;
+
 export type Section =
   | ProductsSection
   | PostsSection
   | RichTextSection
   | SubscribeSection
   | FeaturedProductSection
-  | WishlistsSection;
+  | WishlistsSection
+  | LinksSection;
+
+export const LinksSectionView = ({ section }: { section: LinksSection }) => (
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {section.links.map((link) => (
+      <a
+        key={link.id}
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className="group flex items-start justify-between gap-3 rounded border border-border p-4 no-underline transition-transform hover:-translate-y-0.5"
+      >
+        <span className="grid gap-1">
+          <span className="font-medium">{link.title}</span>
+          {link.subtitle ? <span className="text-sm text-muted">{link.subtitle}</span> : null}
+        </span>
+        <ArrowUpRight className="size-5 shrink-0" />
+      </a>
+    ))}
+  </div>
+);
 
 export const PostsView = ({ posts }: { posts: Post[] }) => {
   const userAgentInfo = useUserAgentInfo();
@@ -229,6 +253,8 @@ export const Section = ({ section, creator_profile, currency_code }: { section: 
       <SubscribeSectionView key={section.id} section={section} creatorProfile={creator_profile} />
     ) : section.type === "SellerProfileFeaturedProductSection" ? (
       <FeaturedProductSectionView key={section.id} section={section} />
+    ) : section.type === "SellerProfileLinksSection" ? (
+      <LinksSectionView key={section.id} section={section} />
     ) : (
       <WishlistsSectionView key={section.id} section={section} />
     )}

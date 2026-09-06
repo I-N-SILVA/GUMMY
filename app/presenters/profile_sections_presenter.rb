@@ -58,6 +58,8 @@ class ProfileSectionsPresenter
           data.merge!({ text: section.text })
         when SellerProfileSubscribeSection
           data.merge!({ button_label: section.button_label })
+        when SellerProfileLinksSection
+          data.merge!({ links: section.links })
         when SellerProfileWishlistsSection
           data.merge!({ shown_wishlists: section.shown_wishlists.map { ObfuscateIds.encrypt(_1) } })
         end
